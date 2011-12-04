@@ -168,14 +168,14 @@ class CMContext
         # strings, numbers, objects, arrays and functions are rendered "as is".
         @text " #{k}=\"#{@esc(v)}\""
 
-  render_contents: (contents) ->
+  render_contents: (contents, args...) ->
     switch typeof contents
       when 'string', 'number', 'boolean'
         @text @esc(contents)
       when 'function'
         @text '\n' if @format
         @tabs++
-        result = contents.call this
+        result = contents.call(this, args...)
         if typeof result is 'string'
           @indent()
           @text @esc(result)
@@ -189,22 +189,10 @@ class CMContext
       _ExtendedContext.prototype[key] = value
     return _ExtendedContext
 
-coffeemugg.render = (template) ->
-  context = new CMContext()
-  context.render_contents(template)
-  console.log context.buffer.join('')
-
-# Testing extensions
-MyContext = CMContext.extend({
-  test: ->
-    @p "test was successful ?!"
-})
-context = new MyContext()
-context.render_contents ->
-  @div "hi", ->
-    @test()
-  @p "#id.class", ->
-    @ul key: 'value', ->
-      @li "blah"
-      @li "blah"
-console.log context.buffer.join('')
+coffeemugg.render = (template, more_context, args...) ->
+  if more_context?
+    context = new (CMContext.extend(more_context))()
+  else
+    context = new CMContext()
+  context.render_contents(template, args...)
+  return context.buffer.join('')
