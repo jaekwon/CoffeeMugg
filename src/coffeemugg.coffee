@@ -58,25 +58,35 @@ coffeemugg.tags = merge_elements 'regular', 'obsolete', 'void', 'obsolete_void'
 # Public/customizable list of elements that should be rendered self-closed.
 coffeemugg.self_closing = merge_elements 'void', 'obsolete_void'
 
-# The context under which rendering happens --
-# 1. Output is aggregated here via this.buffer.push <string>
-# 2. This provides all the tag functions like 'text', 'div', etc.
-#FIRST -> the basic functions
-#SECOND -> the extensions
-#THIRD -> the context variables like buffer, tab, options.
+# A unique token that represents a newline.
+NEWLINE = new Object()
 
+# The rendering context and renderer.
+# Call CMContext.extend() to extend with more helper functions.
 class CMContext
   constructor: (options) ->
-    @buffer = []                              # collect output
-    @tabs = 0                                 # count indentation
+    @buffer = [] # collect output
     @format = options?.format || off
     @autoescape = options?.autoescape || off
+
+  @bufferwrap: (fn) ->
+    return ->
+      oldbuffer = @buffer
+      @buffer = newbuffer = []
+      result = fn.apply(this, arguments)
+      if typeof result == 'string'
+        @text @esc result
+        @newline()
+      if newbuffer.length > 0
+        oldbuffer.push(newbuffer)
+      @buffer = oldbuffer
+      null
 
   # procedurally add methods for each tag
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing)
     do (tag) =>
-      this::[tag] = (args...) ->
-        this.render_tag(tag, args...)
+      this::[tag] = ->
+        this.render_tag(tag, arguments)
 
   esc: (txt) ->
     if @autoescape then @h(txt) else String(txt)
@@ -89,29 +99,31 @@ class CMContext
 
   doctype: (type = 'default') ->
     @text coffeemugg.doctypes[type]
-    @text '\n' if @format
+    @newline()
 
   text: (txt) ->
     @buffer.push String(txt)
     null
 
+  newline: ->
+    @buffer.push NEWLINE
+    null
+
   comment: (cmt) ->
     @text "<!--#{cmt}-->"
-    @text '\n' if @format
+    @newline()
 
   # Conditional IE comments.
-  ie: (condition, contents) ->
-    @indent()
+  ie: @bufferwrap (condition, contents) ->
     @text "<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
-    @text '\n' if @format
+    @newline()
 
-  repeat: (string, count) -> Array(count + 1).join string
+  repeat: (string, count) ->
+    Array(count + 1).join string
 
-  indent: -> @text @repeat('  ', @tabs) if @format
-
-  render_tag: (name, args...) ->
+  render_tag: (name, args) ->
     # get idclass, attrs, contents
     for a in args
       switch typeof a
@@ -129,18 +141,19 @@ class CMContext
               idclass = a
             else
               contents = a
-    @indent()
     @text "<#{name}"
     @render_idclass(idclass) if idclass
     @render_attrs(attrs) if attrs
     if name in coffeemugg.self_closing
       @text ' />'
-      @text '\n' if @format
+      @newline()
     else
       @text '>'
       @render_contents(contents)
+      if @buffer[@buffer.length-1] instanceof Array
+        @newline()
       @text "</#{name}>"
-      @text '\n' if @format
+      @newline()
     null
 
   render_idclass: (str) ->
@@ -173,26 +186,67 @@ class CMContext
       when 'string', 'number', 'boolean'
         @text @esc(contents)
       when 'function'
-        @text '\n' if @format
-        @tabs++
-        result = contents.call(this, args...)
-        if typeof result is 'string'
-          @indent()
-          @text @esc(result)
-          @text '\n' if @format
-        @tabs--
-        @indent()
+        CMContext.bufferwrap(contents).call(this, args...)
+
+  # convenience
+  render: ->
+    @render_contents(arguments...)
+    ('' + @toString())
+
+  toString: ->
+    _2str = (buffer, indent) =>
+      indents = if @format then @repeat('  ', indent) else ''
+      content = buffer.map( (value, i) ->
+        if typeof value == 'string'
+          value
+        else if value is NEWLINE
+          ('\n'+indents) if (i < buffer.length - 1)
+        else if value instanceof Array
+          '  ' + _2str(value, indent+1)
+        else
+          throw new Error("Unknown type in buffer #{typeof value}")
+      ).join('')
+      return '\n'+indents+content
+    return _2str(@buffer, -1).substr(4) # hack.
+
+  debugString: ->
+    _2str = (buffer, indent) =>
+      indents = (if @format then @repeat('  ', indent) else '')
+      indents_1 = (if @format then @repeat('  ', indent+1) else '')
+      content = (for value in buffer
+        if typeof value == 'string'
+          indents_1 + value
+        else if value is NEWLINE
+          indents_1 + 'NEWLINE'
+        else if value instanceof Array
+          _2str(value, indent+1)
+        else
+          throw new Error("Unknown type in buffer #{typeof value}")
+      ).join("\n")
+      return "#{indents}[\n#{content}\n#{indents}]"
+    return _2str(@buffer, 0)
 
   @extend: (object) =>
     class _ExtendedContext extends this
     for key, value of object
+      if typeof value == 'function'
+        value = @bufferwrap(value)
       _ExtendedContext.prototype[key] = value
     return _ExtendedContext
 
+# convenience, render template to string
 coffeemugg.render = (template, more_context, args...) ->
   if more_context?
     context = new (CMContext.extend(more_context))()
   else
-    context = new CMContext()
+    context = new CMContext(format: on)
+  return context.render(template, args...)
+
+# print the rendered buffer structure
+coffeemugg.debug = (template, more_context, args...) ->
+  if more_context?
+    context = new (CMContext.extend(more_context))()
+  else
+    context = new CMContext(format: on)
   context.render_contents(template, args...)
-  return context.buffer.join('')
+  console.log ''+context.debugString()
