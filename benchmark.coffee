@@ -61,6 +61,30 @@ coffeemugg_template_args = (data) ->
             @li user.name
             @li -> @a href: "mailto:#{user.email}", -> user.email
 
+# DOESN'T WORK YET
+coffeemugg_template_flat_args = (data) ->
+  @doctype 5
+  @html lang: 'en',
+    @head '',
+      @meta charset: 'utf-8'
+      @title data.title
+      @style '''
+        body {font-family: "sans-serif"}
+        section, header {display: block}
+      '''
+    @body '',
+      @section '',
+        @header '',
+          @h1 data.title
+        if data.inspired
+          @p 'Create a witty example'
+        else
+          @p 'Go meta'
+        @ul '',
+          for user in data.users
+            @li user.name
+            @li @a {href: "mailto:#{user.email}"}, user.email
+
 coffeemugg_template_context = ->
   @doctype 5
   @html lang: 'en', ->
@@ -258,6 +282,7 @@ benchmark = (title, code) ->
 @run = ->
   benchmark 'CoffeeMugg (none)', -> coffeemugg.render coffeemugg_template
   benchmark 'CoffeeMugg (args)', -> coffeemugg.render coffeemugg_template_args, null, data
+  benchmark 'CoffeeMugg (flat, args) # DOES NOT WORK YET', -> coffeemugg.render coffeemugg_template_flat_args, null, data
   benchmark 'CoffeeMugg (context)', -> coffeemugg.render coffeemugg_template_context, {data: data}
 
   console.log '\n'

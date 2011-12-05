@@ -59,24 +59,30 @@ coffeemugg.tags = merge_elements 'regular', 'obsolete', 'void', 'obsolete_void'
 coffeemugg.self_closing = merge_elements 'void', 'obsolete_void'
 
 # The context under which rendering happens --
-# 1. Output is aggregated here via this.buffer.push <string>
-# 2. This provides all the tag functions like 'text', 'div', etc.
-#FIRST -> the basic functions
-#SECOND -> the extensions
-#THIRD -> the context variables like buffer, tab, options.
-
 class CMContext
   constructor: (options) ->
-    @buffer = []                              # collect output
-    @tabs = 0                                 # count indentation
+    @buffer = [] # collect output.
     @format = options?.format || off
     @autoescape = options?.autoescape || off
+
+  @bufferwrap: (fn) ->
+    return ->
+      console.log "bufferwrap{{"
+      oldbuffer = @buffer
+      @buffer = newbuffer = []
+      result = fn.apply(this, arguments)
+      if typeof result == 'string'
+        newbuffer.push(@esc(result))
+        newbuffer.push('\n') if @format
+      @buffer = oldbuffer
+      console.log "}}bufferwrap newbuffer: #{newbuffer} result: #{result}"
+      return if newbuffer.length > 0 then newbuffer else null
 
   # procedurally add methods for each tag
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing)
     do (tag) =>
-      this::[tag] = (args...) ->
-        this.render_tag(tag, args...)
+      this::[tag] = CMContext.bufferwrap ->
+        this.render_tag(tag, arguments)
 
   esc: (txt) ->
     if @autoescape then @h(txt) else String(txt)
@@ -101,7 +107,6 @@ class CMContext
 
   # Conditional IE comments.
   ie: (condition, contents) ->
-    @indent()
     @text "<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
@@ -109,27 +114,35 @@ class CMContext
 
   repeat: (string, count) -> Array(count + 1).join string
 
-  indent: -> @text @repeat('  ', @tabs) if @format
-
-  render_tag: (name, args...) ->
+  # always returns null
+  render_tag: (name, args) ->
     # get idclass, attrs, contents
-    for a in args
+    contents_index = undefined
+    for i in [0...args.length]
+      a = args[i]
       switch typeof a
         when 'function'
-          contents = a.bind(this)
+          contents_index = i if not contents_index?
+          #contents = a.bind(this)
         when 'object'
-          attrs = a
+          if a instanceof Array
+            contents_index = i if not contents_index?
+          else
+            attrs = a
         when 'number', 'boolean'
-          contents = a
+          contents_index = i if not contents_index?
+          #contents = a
         when 'string'
           if args.length is 1
-            contents = a
+            contents_index = i if not contents_index?
+            #contents = a
           else
             if a is args[0]
               idclass = a
             else
-              contents = a
-    @indent()
+              contents_index = i if not contents_index?
+              #contents = a
+
     @text "<#{name}"
     @render_idclass(idclass) if idclass
     @render_attrs(attrs) if attrs
@@ -138,9 +151,15 @@ class CMContext
       @text '\n' if @format
     else
       @text '>'
-      @render_contents(contents)
+      for i in [contents_index...args.length]
+        contents = args[i]
+        if contents instanceof Array
+          @buffer.push(contents)
+        else
+          @render_contents(contents)
       @text "</#{name}>"
       @text '\n' if @format
+    console.log ">>render_tag buffer:#{@buffer}"
     null
 
   render_idclass: (str) ->
@@ -169,23 +188,37 @@ class CMContext
         @text " #{k}=\"#{@esc(v)}\""
 
   render_contents: (contents, args...) ->
+    console.log "render_contents(("; result = undefined
     switch typeof contents
       when 'string', 'number', 'boolean'
+        console.log "----- string/number/boolean #{@esc(contents)}"
         @text @esc(contents)
       when 'function'
+        console.log "----- render_contents:function"
         @text '\n' if @format
-        @tabs++
-        result = contents.call(this, args...)
-        if typeof result is 'string'
-          @indent()
-          @text @esc(result)
-          @text '\n' if @format
-        @tabs--
-        @indent()
+        result = CMContext.bufferwrap(contents).call(this, args...)
+        console.log ">>>>> #{result}"
+        @buffer.push(result) if result?
+    console.log "))render_contents buffer:#{@buffer} result:#{result}"
+
+  toString: ->
+    _2str = (buffer) ->
+      (for value in buffer
+        switch typeof value
+          when 'string'
+            value
+          when 'object'
+            _2str(value)
+          else
+            throw new Error("unknown type in buffer #{typeof value}")
+      ).join('')
+    _2str @buffer
 
   @extend: (object) =>
     class _ExtendedContext extends this
     for key, value of object
+      if typeof value == 'function'
+        value = this.bufferwrap(value)
       _ExtendedContext.prototype[key] = value
     return _ExtendedContext
 
@@ -195,4 +228,42 @@ coffeemugg.render = (template, more_context, args...) ->
   else
     context = new CMContext()
   context.render_contents(template, args...)
-  return context.buffer.join('')
+  return ''+context
+
+console.log coffeemugg.render ->
+  @div "some div"
+
+# 1
+@tagfunc "#id", "content"
+
+# 2.a
+@tagfunc "#id",
+  @tagfunc "#inner"
+
+# 2.b
+@tagfunc "#id", ->         # 'outer'
+  @tagfunc "#id",       \  # but the return value here is what really matters.
+    @tagfunc "#inner"   /  # makes 'outer' think there's something in the buffer.
+
+# 3
+@tagfunc "#id",
+  @subroutine()
+
+# 4
+@tagfunc "#id", ->
+  @tagfunc "#inner"
+
+# 5
+@tagfunc "#id", ->
+  "somestring"
+
+# 6
+@tagfunc "#id", ->
+  @subroutine()
+
+# 7
+@tagfunc "#id", @subroutine
+
+# TODO i think one bind is unnecessary
+console.log coffeemugg.render ->
+  @div "some div"
