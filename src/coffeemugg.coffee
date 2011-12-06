@@ -63,24 +63,11 @@ NEWLINE = new Object()
 
 # The rendering context and renderer.
 # Call CMContext.extend() to extend with more helper functions.
-class CMContext
+exports.CMContext = class CMContext
   constructor: (options) ->
     @buffer = [] # collect output
     @format = options?.format || off
     @autoescape = options?.autoescape || off
-
-  @bufferwrap: (fn) ->
-    return ->
-      oldbuffer = @buffer
-      @buffer = newbuffer = []
-      result = fn.apply(this, arguments)
-      if typeof result == 'string'
-        @text @esc result
-        @newline()
-      if newbuffer.length > 0
-        oldbuffer.push(newbuffer)
-      @buffer = oldbuffer
-      null
 
   # procedurally add methods for each tag
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing)
@@ -109,12 +96,24 @@ class CMContext
     @buffer.push NEWLINE
     null
 
+  indent: (fn) ->
+    oldbuffer = @buffer
+    @buffer = newbuffer = []
+    result = fn.call(this)
+    if typeof result == 'string'
+      @text @esc result
+      @newline()
+    if newbuffer.length > 0
+      oldbuffer.push(newbuffer)
+    @buffer = oldbuffer
+    null
+
   comment: (cmt) ->
     @text "<!--#{cmt}-->"
     @newline()
 
   # Conditional IE comments.
-  ie: @bufferwrap (condition, contents) ->
+  ie: (condition, contents) ->
     @text "<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
@@ -186,7 +185,11 @@ class CMContext
       when 'string', 'number', 'boolean'
         @text @esc(contents)
       when 'function'
-        CMContext.bufferwrap(contents).call(this, args...)
+        if @format
+          @indent ->
+            contents.call(this, args...)
+        else
+          contents.call(this, args...)
 
   # convenience
   render: ->
@@ -229,8 +232,6 @@ class CMContext
   @extend: (object) =>
     class _ExtendedContext extends this
     for key, value of object
-      if typeof value == 'function'
-        value = @bufferwrap(value)
       _ExtendedContext.prototype[key] = value
     return _ExtendedContext
 
@@ -239,7 +240,7 @@ coffeemugg.render = (template, more_context, args...) ->
   if more_context?
     context = new (CMContext.extend(more_context))()
   else
-    context = new CMContext(format: on)
+    context = new CMContext()
   return context.render(template, args...)
 
 # print the rendered buffer structure
