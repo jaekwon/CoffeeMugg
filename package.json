@@ -7,7 +7,6 @@
   "dependencies": {"coffee-script": ">= 1.1.2"},
   "devDependencies": {"jade": "0.13.0", "eco": "1.1.0-rc-1", "ejs": "0.4.3", "haml": "0.4.2", "coffeekup": "0.3.0"},
   "keywords": ["template", "view", "coffeescript", "coffeekup"],
-  "bin": "./bin/coffeemugg",
   "main": "./lib/coffeemugg",
   "engines": {"node": ">= 0.4.7"},
   "contributors": [
