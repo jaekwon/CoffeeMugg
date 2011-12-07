@@ -43,6 +43,11 @@ with arguments:
 
     coffeemugg.render template, <OPTIONS>, "FRUITS", ["Apple", "Banana", "Raisin"]
 
+Installation
+============
+
+    npm install coffeemugg
+
 More
 ====
 
