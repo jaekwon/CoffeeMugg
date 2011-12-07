@@ -258,7 +258,7 @@ benchmark = (title, code) ->
 @run = ->
   benchmark 'CoffeeMugg (none)', -> coffeemugg.render coffeemugg_template
   benchmark 'CoffeeMugg (args)', -> coffeemugg.render coffeemugg_template_args, null, data
-  benchmark 'CoffeeMugg (context)', -> coffeemugg.render coffeemugg_template_context, {data: data}
+  benchmark 'CoffeeMugg (context)', -> coffeemugg.render coffeemugg_template_context, context: {data: data}
 
   console.log '\n'
 

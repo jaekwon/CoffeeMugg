@@ -99,20 +99,19 @@ exports.CMContext = class CMContext
   indent: (fn) ->
     oldbuffer = @buffer
     @buffer = newbuffer = []
-    result = fn.call(this)
-    if typeof result == 'string'
-      @text @esc result
-      @newline()
+    fn.call(this)
     if newbuffer.length > 0
       oldbuffer.push(newbuffer)
     @buffer = oldbuffer
     null
 
+  tag: (name, args...) ->
+    @render_tag(name, args)
+
   comment: (cmt) ->
     @text "<!--#{cmt}-->"
     @newline()
 
-  # Conditional IE comments.
   ie: (condition, contents) ->
     @text "<!--[if #{condition}]>"
     @render_contents(contents)
@@ -149,8 +148,6 @@ exports.CMContext = class CMContext
     else
       @text '>'
       @render_contents(contents)
-      if @buffer[@buffer.length-1] instanceof Array
-        @newline()
       @text "</#{name}>"
       @newline()
     null
@@ -187,9 +184,11 @@ exports.CMContext = class CMContext
       when 'function'
         if @format
           @indent ->
-            contents.call(this, args...)
+            result = contents.call(this, args...)
         else
-          contents.call(this, args...)
+          result = contents.call(this, args...)
+        if typeof result == 'string'
+          @text @esc result
 
   # convenience
   render: ->
@@ -198,19 +197,25 @@ exports.CMContext = class CMContext
 
   toString: ->
     _2str = (buffer, indent) =>
-      indents = if @format then @repeat('  ', indent) else ''
+      tab = '  '
+      indents = if @format then @repeat(tab, indent) else ''
+      prefix = if @format and indent > 0 then '\n'+@repeat(tab, indent) else ''
+      suffix = if @format and indent > 0 then '\n'+@repeat(tab, indent-1) else ''
       content = buffer.map( (value, i) ->
         if typeof value == 'string'
           value
         else if value is NEWLINE
           ('\n'+indents) if (i < buffer.length - 1)
         else if value instanceof Array
-          '  ' + _2str(value, indent+1)
+          _2str(value, indent+1)
         else
           throw new Error("Unknown type in buffer #{typeof value}")
       ).join('')
-      return '\n'+indents+content
-    return _2str(@buffer, -1).substr(4) # hack.
+      return prefix+content+suffix
+    if @buffer[0] instanceof Array
+      return _2str(@buffer[0], 0)
+    else
+      return _2str(@buffer, 0)
 
   debugString: ->
     _2str = (buffer, indent) =>
@@ -236,18 +241,19 @@ exports.CMContext = class CMContext
     return _ExtendedContext
 
 # convenience, render template to string
-coffeemugg.render = (template, more_context, args...) ->
-  if more_context?
-    context = new (CMContext.extend(more_context))()
+coffeemugg.render = (template, options, args...) ->
+  if options?.context?
+    context = new (CMContext.extend(options.context))(options)
   else
-    context = new CMContext()
+    context = new CMContext(options)
   return context.render(template, args...)
 
 # print the rendered buffer structure
-coffeemugg.debug = (template, more_context, args...) ->
-  if more_context?
-    context = new (CMContext.extend(more_context))()
+coffeemugg.debug = (template, options, args...) ->
+  options.format ?= on if options
+  if options?.context?
+    context = new (CMContext.extend(options.context))(options)
   else
-    context = new CMContext(format: on)
+    context = new CMContext(options)
   context.render_contents(template, args...)
   console.log ''+context.debugString()
