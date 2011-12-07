@@ -11,7 +11,7 @@ Why CoffeeMugg?
  * First, a disclaimer: I can't vouch for the usefulness of this branch just yet.
  * I believe this makes it easier to create libraries of view-helper routines, in the manner of RoR ActionView.
  * CoffeeMugg is easier to grok than CoffeeKup, since it's straight up Javascript/Coffeescript without an intermediate compilation step, and local variables obey original Javascript/Coffeescript rules. If you want to create a template dynamically using function closures, why go ahead.
- * There is no compilation step, but rendering is slower. See below for more information.
+ * There is no compilation step, so rendering on the client may be faster.
 
 Sample
 ======
