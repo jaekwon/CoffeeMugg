@@ -64,10 +64,15 @@ NEWLINE = new Object()
 # The rendering context and renderer.
 # Call CMContext.extend() to extend with more helper functions.
 exports.CMContext = class CMContext
+  # options:
+  #   format:     Format with newlines and tabs (default off)
+  #   autoescape: Whether to autoescape all strings (default off)
+  #   context:    Dynamically extend the CMContext instance
   constructor: (options) ->
     @buffer = [] # collect output
     @format = options?.format || off
     @autoescape = options?.autoescape || off
+    this.extend(options.context) if options?.context?
 
   # procedurally add methods for each tag
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing)
@@ -191,6 +196,8 @@ exports.CMContext = class CMContext
           @text @esc result
 
   # convenience
+  # 0:    The template function
+  # 1...: Arguments to the template function
   render: ->
     @render_contents(arguments...)
     ('' + @toString())
@@ -234,26 +241,31 @@ exports.CMContext = class CMContext
       return "#{indents}[\n#{content}\n#{indents}]"
     return _2str(@buffer, 0)
 
+  # Extend the CMContext class
   @extend: (object) =>
     class _ExtendedContext extends this
     for key, value of object
       _ExtendedContext.prototype[key] = value
     return _ExtendedContext
 
+  # Extend this instance, dynamically
+  extend: (object) ->
+    for key, value of object
+      this[key] = value
+    this
+
 # convenience, render template to string
+# options:
+#   format:     Format with newlines and tabs (default off)
+#   autoescape: Whether to autoescape all strings (default off)
+#   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
-  if options?.context?
-    context = new (CMContext.extend(options.context))(options)
-  else
-    context = new CMContext(options)
+  context = new CMContext(options)
   return context.render(template, args...)
 
 # print the rendered buffer structure
 coffeemugg.debug = (template, options, args...) ->
   options.format ?= on if options
-  if options?.context?
-    context = new (CMContext.extend(options.context))(options)
-  else
-    context = new CMContext(options)
+  context = new CMContext(options)
   context.render_contents(template, args...)
   console.log ''+context.debugString()
