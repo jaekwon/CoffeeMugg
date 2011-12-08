@@ -1,7 +1,14 @@
 if window?
   coffeemugg = window.CoffeeMug = {}
+  logger = {
+    debug: (msg) -> console.log "debug: #{msg}"
+    info:  (msg) -> console.log "info: #{msg}"
+    warn:  (msg) -> console.log "warn: #{msg}"
+    error: (msg) -> console.log "error: #{msg}"
+  }
 else
   coffeemugg = exports
+  logger = require('nogg').logger('coffeemugg')
 
 coffeemugg.version = '0.0.1alpha'
 
@@ -66,7 +73,7 @@ NEWLINE = new Object()
 exports.CMContext = class CMContext
   # options:
   #   format:     Format with newlines and tabs (default off)
-  #   autoescape: Whether to autoescape all strings (default off)
+  #   autoescape: Autoescape all strings (default off)
   #   context:    Dynamically extend the CMContext instance
   constructor: (options) ->
     @buffer = [] # collect output
@@ -242,15 +249,25 @@ exports.CMContext = class CMContext
     return _2str(@buffer, 0)
 
   # Extend the CMContext class
-  @extend: (object) =>
+  # options:
+  #   warn: if false, will not warn upon trampling existing keys (default true)
+  @extend: (object, options) =>
+    warn = options?.warn ? true
     class _ExtendedContext extends this
     for key, value of object
-      _ExtendedContext.prototype[key] = value
+      if warn and this::[key]?
+        logger.warn "@extend: Key `#{key}` already exists for this context."
+      _ExtendedContext::[key] = value
     return _ExtendedContext
 
   # Extend this instance, dynamically
-  extend: (object) ->
+  # options:
+  #   warn: if false, will not warn upon trampling existing keys (default true)
+  extend: (object, options) ->
+    warn = options?.warn ? true
     for key, value of object
+      if warn and this[key]?
+        logger.warn "extend: Key `#{key}` already exists for this context. (dynamic)"
       this[key] = value
     this
 
