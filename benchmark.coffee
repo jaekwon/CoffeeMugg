@@ -281,5 +281,3 @@ benchmark = (title, code) ->
   benchmark 'Jade (cache off)', -> jade.render jade_template, locals: data
   benchmark 'haml-js', -> haml.render haml_template, locals: data
   benchmark 'ejs (cache off)', -> ejs.render ejs_template, locals: data
-
-@run()

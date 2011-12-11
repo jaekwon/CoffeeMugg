@@ -179,5 +179,3 @@ render = cm.render
       print t.template + "\n"
       printc 'green', t.expected + "\n"
       printc 'redder', t.result.stack + "\n\n"
-
-@run()
