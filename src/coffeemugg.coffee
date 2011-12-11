@@ -10,7 +10,7 @@ else
   coffeemugg = exports
   logger = require('nogg').logger('coffeemugg')
 
-coffeemugg.version = '0.0.1alpha'
+coffeemugg.version = '0.0.2'
 
 # Values available to the `doctype` function inside a template.
 # Ex.: `doctype 'strict'`
