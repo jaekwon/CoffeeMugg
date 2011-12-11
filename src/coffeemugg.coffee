@@ -1,7 +1,14 @@
 if window?
   coffeemugg = window.CoffeeMug = {}
+  logger = {
+    debug: (msg) -> console.log "debug: #{msg}"
+    info:  (msg) -> console.log "info: #{msg}"
+    warn:  (msg) -> console.log "warn: #{msg}"
+    error: (msg) -> console.log "error: #{msg}"
+  }
 else
   coffeemugg = exports
+  logger = require('nogg').logger('coffeemugg')
 
 coffeemugg.version = '0.0.1alpha'
 
@@ -64,10 +71,15 @@ NEWLINE = new Object()
 # The rendering context and renderer.
 # Call CMContext.extend() to extend with more helper functions.
 exports.CMContext = class CMContext
+  # options:
+  #   format:     Format with newlines and tabs (default off)
+  #   autoescape: Autoescape all strings (default off)
+  #   context:    Dynamically extend the CMContext instance
   constructor: (options) ->
     @buffer = [] # collect output
     @format = options?.format || off
     @autoescape = options?.autoescape || off
+    this.extend(options.context) if options?.context?
 
   # procedurally add methods for each tag
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing)
@@ -191,6 +203,8 @@ exports.CMContext = class CMContext
           @text @esc result
 
   # convenience
+  # 0:    The template function
+  # 1...: Arguments to the template function
   render: ->
     @render_contents(arguments...)
     ('' + @toString())
@@ -234,26 +248,41 @@ exports.CMContext = class CMContext
       return "#{indents}[\n#{content}\n#{indents}]"
     return _2str(@buffer, 0)
 
-  @extend: (object) =>
+  # Extend the CMContext class
+  # options:
+  #   warn: if false, will not warn upon trampling existing keys (default true)
+  @extend: (object, options) =>
+    warn = options?.warn ? true
     class _ExtendedContext extends this
     for key, value of object
-      _ExtendedContext.prototype[key] = value
+      if warn and this::[key]?
+        logger.warn "@extend: Key `#{key}` already exists for this context."
+      _ExtendedContext::[key] = value
     return _ExtendedContext
 
+  # Extend this instance, dynamically
+  # options:
+  #   warn: if false, will not warn upon trampling existing keys (default true)
+  extend: (object, options) ->
+    warn = options?.warn ? true
+    for key, value of object
+      if warn and this[key]?
+        logger.warn "extend: Key `#{key}` already exists for this context. (dynamic)"
+      this[key] = value
+    this
+
 # convenience, render template to string
+# options:
+#   format:     Format with newlines and tabs (default off)
+#   autoescape: Whether to autoescape all strings (default off)
+#   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
-  if options?.context?
-    context = new (CMContext.extend(options.context))(options)
-  else
-    context = new CMContext(options)
+  context = new CMContext(options)
   return context.render(template, args...)
 
 # print the rendered buffer structure
 coffeemugg.debug = (template, options, args...) ->
   options.format ?= on if options
-  if options?.context?
-    context = new (CMContext.extend(options.context))(options)
-  else
-    context = new CMContext(options)
+  context = new CMContext(options)
   context.render_contents(template, args...)
   console.log ''+context.debugString()

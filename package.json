@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "author": "Jae Kwon <jkwon.work@gmail.com>",
   "repository": {"type": "git", "url": "git://github.com/jaekwon/coffeemugg.git"},
-  "dependencies": {"coffee-script": ">= 1.1.2"},
+  "dependencies": {"coffee-script": ">= 1.1.2", "nogg": ">= 0.0.2"},
   "devDependencies": {"jade": "0.13.0", "eco": "1.1.0-rc-1", "ejs": "0.4.3", "haml": "0.4.2", "coffeekup": "0.3.0"},
   "keywords": ["template", "view", "coffeescript", "coffeekup"],
   "main": "./lib/coffeemugg",
