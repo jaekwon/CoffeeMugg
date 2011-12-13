@@ -22,17 +22,16 @@ Sample
 
 with subroutines:
 
-    # Create a new class with all the subroutines
-    MyContext = CMContext.extend({
+    subroutines = {
       myroutine: ->
         @p 'blah blah'
-    })
-    
-    # Create a rendering instance
-    context = new MyContext()
-    context.render ->
+    }
+
+    template = ->
       @div ->
         @myroutine()
+
+    coffeemugg.render template, {context: subroutines}
 
 with arguments:
 
