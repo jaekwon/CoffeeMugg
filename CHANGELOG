@@ -1,0 +1,2 @@
+* v0.0.3 (Dec 12, 2011)
+  - removed <CMContext>.render method, since 'render' is a common function name for a templating system to override.

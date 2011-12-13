@@ -1,7 +1,7 @@
 {
   "name": "coffeemugg",
   "description": "HTML templating with CoffeeScript.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "Jae Kwon <jkwon.work@gmail.com>",
   "repository": {"type": "git", "url": "git://github.com/jaekwon/coffeemugg.git"},
   "dependencies": {"coffee-script": ">= 1.1.2", "nogg": ">= 0.0.2"},

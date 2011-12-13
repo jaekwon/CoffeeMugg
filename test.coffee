@@ -126,7 +126,6 @@ tests =
     options: {format: yes}
 
 cm = require './src/coffeemugg'
-render = cm.render
 
 @run = ->
   {print} = require 'sys'

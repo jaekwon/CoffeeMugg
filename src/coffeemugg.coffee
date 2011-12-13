@@ -201,13 +201,7 @@ exports.CMContext = class CMContext
           result = contents.call(this, args...)
         if typeof result == 'string'
           @text @esc result
-
-  # convenience
-  # 0:    The template function
-  # 1...: Arguments to the template function
-  render: ->
-    @render_contents(arguments...)
-    ('' + @toString())
+    return this
 
   toString: ->
     _2str = (buffer, indent) =>
@@ -278,11 +272,10 @@ exports.CMContext = class CMContext
 #   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
   context = new CMContext(options)
-  return context.render(template, args...)
+  return context.render_contents(template, args...).toString()
 
 # print the rendered buffer structure
 coffeemugg.debug = (template, options, args...) ->
   options.format ?= on if options
   context = new CMContext(options)
-  context.render_contents(template, args...)
-  console.log ''+context.debugString()
+  console.log context.render_contents(template, args...).debugString()
