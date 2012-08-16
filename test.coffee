@@ -129,7 +129,7 @@ cm = require './src/coffeemugg'
 
 @run = ->
   {print} = require 'sys'
-  colors = {red: "\033[31m", redder: "\033[91m", green: "\033[32m", normal: "\033[0m"}
+  colors = {red: "\x1b[31m", redder: "\x1b[91m", green: "\x1b[32m", normal: "\x1b[0m"}
   printc = (color, str) -> print colors[color] + str + colors.normal
 
   [total, passed, failed, errors] = [0, [], [], []]
