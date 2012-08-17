@@ -106,7 +106,7 @@ exports.CMContext = class CMContext
         this.render_tag(tag, arguments)
 
   esc: (txt) ->
-    if @autoescape then @h(txt) else String(txt)
+    if @autoescape then @h(txt) else txt
 
   h: (txt) ->
     String(txt).replace(/&/g, '&amp;')
@@ -151,9 +151,6 @@ exports.CMContext = class CMContext
         param.type = 'text/coffeescript'
         @script param
 
-  repeat: (string, count) ->
-    Array(count + 1).join string
-
   render_tag: (name, args) ->
     # get idclass, attrs, contents
     for a in args
@@ -186,17 +183,12 @@ exports.CMContext = class CMContext
   render_idclass: (str) ->
     classes = []
     for i in str.split '.'
-      if i.indexOf('#') is 0
-        id = i.replace '#', ''
+      if i[0] is '#'
+        id = i[1..]
       else
         classes.push i unless i is ''
     @text " id=\"#{id}\"" if id
-    if classes.length > 0
-      @text " class=\""
-      for c in classes
-        @text ' ' unless c is classes[0]
-        @text c
-      @text '"'
+    @text " class=\"#{classes.join ' '}\"" if classes.length > 0
 
   render_attrs: (obj) ->
     for k, v of obj
