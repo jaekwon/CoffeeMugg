@@ -1,5 +1,6 @@
 if window?
   coffeemugg = window.CoffeeMug = {}
+  coffee = if CoffeeScript? then CoffeeScript else null
   logger = {
     debug: (msg) -> console.log "debug: #{msg}"
     info:  (msg) -> console.log "info: #{msg}"
@@ -9,6 +10,7 @@ if window?
 else
   coffeemugg = exports
   logger = require('nogg').logger('coffeemugg')
+  coffee = require 'coffee-script'
 
 coffeemugg.version = '0.0.2'
 
@@ -25,6 +27,20 @@ coffeemugg.doctypes =
   'basic': '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">'
   'mobile': '<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">'
   'ce': '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "ce-html-1.0-transitional.dtd">'
+
+# CoffeeScript-generated JavaScript may contain anyone of these; but when we
+# take a function to string form to manipulate it, and then recreate it through
+# the `Function()` constructor, it loses access to its parent scope and
+# consequently to any helpers it might need. So we need to reintroduce these
+# inside any "rewritten" function.
+# From coffee-script/lib/coffee-script/nodes.js under UTILITIES
+coffeescript_helpers = """
+  var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+  __hasProp = {}.hasOwnProperty,
+  __slice = [].slice;
+""".replace /\n/g, ''
 
 # Private HTML element reference.
 # Please mind the gap (1 space at the beginning of each subsequent line).
@@ -76,8 +92,10 @@ exports.CMContext = class CMContext
   #   autoescape: Autoescape all strings (default off)
   #   context:    Dynamically extend the CMContext instance
   constructor: (options) ->
-    @buffer = [] # collect output
+    @buffer = "" # collect output
     @format = options?.format || off
+    @newline = ''
+    @indent = ''
     @autoescape = options?.autoescape || off
     this.extend(options.context) if options?.context?
 
@@ -88,7 +106,7 @@ exports.CMContext = class CMContext
         this.render_tag(tag, arguments)
 
   esc: (txt) ->
-    if @autoescape then @h(txt) else String(txt)
+    if @autoescape then @h(txt) else txt
 
   h: (txt) ->
     String(txt).replace(/&/g, '&amp;')
@@ -97,41 +115,41 @@ exports.CMContext = class CMContext
       .replace(/"/g, '&quot;')
 
   doctype: (type = 'default') ->
-    @text coffeemugg.doctypes[type]
-    @newline()
+    @text @indent + coffeemugg.doctypes[type]
 
   text: (txt) ->
-    @buffer.push String(txt)
-    null
-
-  newline: ->
-    @buffer.push NEWLINE
-    null
-
-  indent: (fn) ->
-    oldbuffer = @buffer
-    @buffer = newbuffer = []
-    fn.call(this)
-    if newbuffer.length > 0
-      oldbuffer.push(newbuffer)
-    @buffer = oldbuffer
+    @buffer += txt
+    @newline = '\n'
     null
 
   tag: (name, args...) ->
     @render_tag(name, args)
 
   comment: (cmt) ->
-    @text "<!--#{cmt}-->"
-    @newline()
+    @text "#{@newline}#{@indent}<!--#{cmt}-->"
+    NEWLINE
 
   ie: (condition, contents) ->
-    @text "<!--[if #{condition}]>"
+    @text "#{@newline}#{@indent}<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
-    @newline()
+    NEWLINE
 
-  repeat: (string, count) ->
-    Array(count + 1).join string
+  coffeescript: (param) ->
+    switch typeof param
+      # `coffeescript -> alert 'hi'` becomes:
+      # `<script>;(function () {return alert('hi');})();</script>`
+      when 'function'
+        @script "#{coffeescript_helpers}(#{param}).call(this);"
+      # `coffeescript "alert 'hi'"` becomes:
+      # `<script type="text/coffeescript">alert 'hi'</script>`
+      when 'string'
+        @script type: 'text/coffeescript', -> param
+      # `coffeescript src: 'script.coffee'` becomes:
+      # `<script type="text/coffeescript" src="script.coffee"></script>`
+      when 'object'
+        param.type = 'text/coffeescript'
+        @script param
 
   render_tag: (name, args) ->
     # get idclass, attrs, contents
@@ -151,33 +169,27 @@ exports.CMContext = class CMContext
               idclass = a
             else
               contents = a
-    @text "<#{name}"
+    @text "#{@newline}#{@indent}<#{name}"
     @render_idclass(idclass) if idclass
     @render_attrs(attrs) if attrs
     if name in coffeemugg.self_closing
       @text ' />'
-      @newline()
     else
       @text '>'
       @render_contents(contents)
       @text "</#{name}>"
-      @newline()
-    null
+    NEWLINE
 
   render_idclass: (str) ->
     classes = []
+    str = String(str).replace /"/, "&quot;"
     for i in str.split '.'
-      if i.indexOf('#') is 0
-        id = i.replace '#', ''
+      if i[0] is '#'
+        id = i[1..]
       else
         classes.push i unless i is ''
     @text " id=\"#{id}\"" if id
-    if classes.length > 0
-      @text " class=\""
-      for c in classes
-        @text ' ' unless c is classes[0]
-        @text c
-      @text '"'
+    @text " class=\"#{classes.join ' '}\"" if classes.length > 0
 
   render_attrs: (obj) ->
     for k, v of obj
@@ -187,60 +199,30 @@ exports.CMContext = class CMContext
       # undefined, false and null result in the attribute not being rendered.
       if v
         # strings, numbers, objects, arrays and functions are rendered "as is".
-        @text " #{k}=\"#{@esc(v)}\""
+        @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
+
+  render: (contents, args...) ->
+    if typeof contents is 'string' and coffee?
+      eval "contents = function () {#{coffee.compile contents, bare: yes}}"
+    @newline = ''
+    if typeof contents is 'function'
+      contents.call(this, args...)
+    this
 
   render_contents: (contents, args...) ->
+    if typeof contents is 'function'
+      @indent += '  ' if @format
+      contents = contents.call(this, args...)
+      @indent = @indent[2..] if @format
+      if contents is NEWLINE
+        @text "#{@newline}#{@indent}"
     switch typeof contents
       when 'string', 'number', 'boolean'
         @text @esc(contents)
-      when 'function'
-        if @format
-          @indent ->
-            result = contents.call(this, args...)
-        else
-          result = contents.call(this, args...)
-        if typeof result == 'string'
-          @text @esc result
-    return this
+    null
 
   toString: ->
-    _2str = (buffer, indent) =>
-      tab = '  '
-      indents = if @format then @repeat(tab, indent) else ''
-      prefix = if @format and indent > 0 then '\n'+@repeat(tab, indent) else ''
-      suffix = if @format and indent > 0 then '\n'+@repeat(tab, indent-1) else ''
-      content = buffer.map( (value, i) ->
-        if typeof value == 'string'
-          value
-        else if value is NEWLINE
-          ('\n'+indents) if (i < buffer.length - 1)
-        else if value instanceof Array
-          _2str(value, indent+1)
-        else
-          throw new Error("Unknown type in buffer #{typeof value}")
-      ).join('')
-      return prefix+content+suffix
-    if @buffer[0] instanceof Array
-      return _2str(@buffer[0], 0)
-    else
-      return _2str(@buffer, 0)
-
-  debugString: ->
-    _2str = (buffer, indent) =>
-      indents = (if @format then @repeat('  ', indent) else '')
-      indents_1 = (if @format then @repeat('  ', indent+1) else '')
-      content = (for value in buffer
-        if typeof value == 'string'
-          indents_1 + value
-        else if value is NEWLINE
-          indents_1 + 'NEWLINE'
-        else if value instanceof Array
-          _2str(value, indent+1)
-        else
-          throw new Error("Unknown type in buffer #{typeof value}")
-      ).join("\n")
-      return "#{indents}[\n#{content}\n#{indents}]"
-    return _2str(@buffer, 0)
+    @buffer
 
   # Extend the CMContext class
   # options:
@@ -272,10 +254,4 @@ exports.CMContext = class CMContext
 #   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
   context = new CMContext(options)
-  return context.render_contents(template, args...).toString()
-
-# print the rendered buffer structure
-coffeemugg.debug = (template, options, args...) ->
-  options.format ?= on if options
-  context = new CMContext(options)
-  console.log context.render_contents(template, args...).debugString()
+  return context.render(template, args...).toString()

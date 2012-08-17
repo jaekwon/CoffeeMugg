@@ -8,6 +8,11 @@ task 'test', -> require('./test').run()
 
 task 'bench', -> require('./benchmark').run()
 
+task 'prof', ->
+  console.log 'This requires the NPM module "profiler"'
+  console.log 'Profile output will be in v8.log; use nprof to read'
+  run 'coffee --nodejs "--prof --prof_lazy --log" profile.coffee'
+
 run = (args...) ->
   for a in args
     switch typeof a

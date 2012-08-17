@@ -125,11 +125,27 @@ tests =
     '''
     options: {format: yes}
 
+  'CoffeeScript function':
+    template: ->
+      @coffeescript ->
+        alert 'hi'
+    expected: '''<script>var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },__bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },__indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },__hasProp = {}.hasOwnProperty,__slice = [].slice;(function () {\n          return alert('hi');\n        }).call(this);</script>'''
+
+  'CoffeeScript string':
+    template: ->
+      @coffeescript "alert 'hi'"
+    expected: '''<script type="text/coffeescript">alert 'hi'</script>'''
+
+  'CoffeeScript object':
+    template: ->
+      @coffeescript src: 'script.coffee'
+    expected: '''<script src="script.coffee" type="text/coffeescript"></script>'''
+
 cm = require './src/coffeemugg'
 
 @run = ->
   {print} = require 'sys'
-  colors = {red: "\033[31m", redder: "\033[91m", green: "\033[32m", normal: "\033[0m"}
+  colors = {red: "\x1b[31m", redder: "\x1b[91m", green: "\x1b[32m", normal: "\x1b[0m"}
   printc = (color, str) -> print colors[color] + str + colors.normal
 
   [total, passed, failed, errors] = [0, [], [], []]
