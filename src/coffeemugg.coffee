@@ -201,6 +201,14 @@ exports.CMContext = class CMContext
         # strings, numbers, objects, arrays and functions are rendered "as is".
         @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
 
+  render: (contents, args...) ->
+    if typeof contents is 'string' and coffee?
+      eval "contents = function () {#{coffee.compile contents, bare: yes}}"
+    @newline = ''
+    if typeof contents is 'function'
+      contents.call(this, args...)
+    this
+
   render_contents: (contents, args...) ->
     if typeof contents is 'function'
       @indent += '  ' if @format
@@ -246,7 +254,4 @@ exports.CMContext = class CMContext
 #   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
   context = new CMContext(options)
-  if typeof template is 'string' and coffee?
-    eval "template = function () {#{coffee.compile template, bare: yes}}"
-  return context.render_contents(template, args...).toString()
-
+  return context.render(template, args...).toString()
