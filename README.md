@@ -8,39 +8,43 @@ CoffeeMugg is a branch of [CoffeeKup](https://github.com/mauricemach/coffeekup).
 Why CoffeeMugg?
 ===============
 
- * First, a disclaimer: I can't vouch for the usefulness of this branch just yet.
- * I believe this makes it easier to create libraries of view-helper routines, in the manner of RoR ActionView.
- * CoffeeMugg is easier to grok than CoffeeKup, since it's straight up Javascript/Coffeescript without an intermediate compilation step, and local variables obey original Javascript/Coffeescript rules. If you want to create a template dynamically using function closures, why go ahead.
- * There is no compilation step, so rendering on the client may be faster.
+ * No magic compilation step: the template code runs as you would expect.
+ * Local variables obey original Javascript/Coffeescript rules. If you want to create a template dynamically using function closures, you can!
+ * This makes it easier to create libraries of view-helper routines, in the manner of RoR ActionView.
 
 Sample
 ======
 
-    coffeemugg.render ->
-      @div ->
-        @p "I am a paragraph"
+Basic example:
+```coffeescript
+coffeemugg.render ->
+  @div ->
+    @p "I am a paragraph"
+```
 
-with subroutines:
+With subroutines:
+```coffeescript
+subroutines = {
+  myroutine: ->
+    @p 'blah blah'
+}
 
-    subroutines = {
-      myroutine: ->
-        @p 'blah blah'
-    }
+template = ->
+  @div ->
+    @myroutine()
 
-    template = ->
-      @div ->
-        @myroutine()
+coffeemugg.render template, {context: subroutines}
+```
 
-    coffeemugg.render template, {context: subroutines}
-
-with arguments:
-
+With arguments:
+```coffeescript
     template = (div_id, contents) ->
       @div id: #div_id, ->
         for content in contents
           @div content
 
     coffeemugg.render template, <OPTIONS>, "FRUITS", ["Apple", "Banana", "Raisin"]
+```
 
 Installation
 ============
