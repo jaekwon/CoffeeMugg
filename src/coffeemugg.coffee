@@ -182,6 +182,7 @@ exports.CMContext = class CMContext
 
   render_idclass: (str) ->
     classes = []
+    str = String(str).replace /"/, "&quot;"
     for i in str.split '.'
       if i[0] is '#'
         id = i[1..]
@@ -198,7 +199,7 @@ exports.CMContext = class CMContext
       # undefined, false and null result in the attribute not being rendered.
       if v
         # strings, numbers, objects, arrays and functions are rendered "as is".
-        @text " #{k}=\"#{@esc(v)}\""
+        @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
 
   render_contents: (contents, args...) ->
     if typeof contents is 'function'
