@@ -92,8 +92,10 @@ exports.CMContext = class CMContext
   #   autoescape: Autoescape all strings (default off)
   #   context:    Dynamically extend the CMContext instance
   constructor: (options) ->
-    @buffer = [] # collect output
+    @buffer = "" # collect output
     @format = options?.format || off
+    @newline = ''
+    @indent = ''
     @autoescape = options?.autoescape || off
     this.extend(options.context) if options?.context?
 
@@ -113,38 +115,25 @@ exports.CMContext = class CMContext
       .replace(/"/g, '&quot;')
 
   doctype: (type = 'default') ->
-    @text coffeemugg.doctypes[type]
-    @newline()
+    @text @indent + coffeemugg.doctypes[type]
 
   text: (txt) ->
-    @buffer.push String(txt)
-    null
-
-  newline: ->
-    @buffer.push NEWLINE
-    null
-
-  indent: (fn) ->
-    oldbuffer = @buffer
-    @buffer = newbuffer = []
-    fn.call(this)
-    if newbuffer.length > 0
-      oldbuffer.push(newbuffer)
-    @buffer = oldbuffer
+    @buffer += txt
+    @newline = '\n'
     null
 
   tag: (name, args...) ->
     @render_tag(name, args)
 
   comment: (cmt) ->
-    @text "<!--#{cmt}-->"
-    @newline()
+    @text "#{@newline}#{@indent}<!--#{cmt}-->"
+    NEWLINE
 
   ie: (condition, contents) ->
-    @text "<!--[if #{condition}]>"
+    @text "#{@newline}#{@indent}<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
-    @newline()
+    NEWLINE
 
   coffeescript: (param) ->
     switch typeof param
@@ -183,18 +172,16 @@ exports.CMContext = class CMContext
               idclass = a
             else
               contents = a
-    @text "<#{name}"
+    @text "#{@newline}#{@indent}<#{name}"
     @render_idclass(idclass) if idclass
     @render_attrs(attrs) if attrs
     if name in coffeemugg.self_closing
       @text ' />'
-      @newline()
     else
       @text '>'
       @render_contents(contents)
       @text "</#{name}>"
-      @newline()
-    null
+    NEWLINE
 
   render_idclass: (str) ->
     classes = []
@@ -222,57 +209,19 @@ exports.CMContext = class CMContext
         @text " #{k}=\"#{@esc(v)}\""
 
   render_contents: (contents, args...) ->
+    if typeof contents is 'function'
+      @indent += '  ' if @format
+      contents = contents.call(this, args...)
+      @indent = @indent[2..] if @format
+      if contents is NEWLINE
+        @text "#{@newline}#{@indent}"
     switch typeof contents
       when 'string', 'number', 'boolean'
         @text @esc(contents)
-      when 'function'
-        if @format
-          @indent ->
-            result = contents.call(this, args...)
-        else
-          result = contents.call(this, args...)
-        if typeof result == 'string'
-          @text @esc result
-    return this
+    null
 
   toString: ->
-    _2str = (buffer, indent) =>
-      tab = '  '
-      indents = if @format then @repeat(tab, indent) else ''
-      prefix = if @format and indent > 0 then '\n'+@repeat(tab, indent) else ''
-      suffix = if @format and indent > 0 then '\n'+@repeat(tab, indent-1) else ''
-      content = buffer.map( (value, i) ->
-        if typeof value == 'string'
-          value
-        else if value is NEWLINE
-          ('\n'+indents) if (i < buffer.length - 1)
-        else if value instanceof Array
-          _2str(value, indent+1)
-        else
-          throw new Error("Unknown type in buffer #{typeof value}")
-      ).join('')
-      return prefix+content+suffix
-    if @buffer[0] instanceof Array
-      return _2str(@buffer[0], 0)
-    else
-      return _2str(@buffer, 0)
-
-  debugString: ->
-    _2str = (buffer, indent) =>
-      indents = (if @format then @repeat('  ', indent) else '')
-      indents_1 = (if @format then @repeat('  ', indent+1) else '')
-      content = (for value in buffer
-        if typeof value == 'string'
-          indents_1 + value
-        else if value is NEWLINE
-          indents_1 + 'NEWLINE'
-        else if value instanceof Array
-          _2str(value, indent+1)
-        else
-          throw new Error("Unknown type in buffer #{typeof value}")
-      ).join("\n")
-      return "#{indents}[\n#{content}\n#{indents}]"
-    return _2str(@buffer, 0)
+    @buffer
 
   # Extend the CMContext class
   # options:
@@ -308,10 +257,3 @@ coffeemugg.render = (template, options, args...) ->
     eval "template = function () {#{coffee.compile template, bare: yes}}"
   return context.render_contents(template, args...).toString()
 
-# print the rendered buffer structure
-coffeemugg.debug = (template, options, args...) ->
-  options.format ?= on if options
-  context = new CMContext(options)
-  if typeof template is 'string' and coffee?
-    eval "template = function () {#{coffee.compile template, bare: yes}}"
-  console.log context.render_contents(template, args...).debugString()
