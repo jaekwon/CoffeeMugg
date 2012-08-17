@@ -1,0 +1,90 @@
+#!/usr/bin/env coffee
+#
+# Adapted from https://github.com/gradus/coffeecup/blob/master/src/cli.coffee
+
+cm = require '../src/coffeemugg'
+fs = require 'fs'
+path = require 'path'
+log = console.log
+{OptionParser} = require 'coffee-script/lib/coffee-script/optparse'
+
+argv = process.argv[2..]
+options = null
+
+handle_error = (err) -> console.log err.stack if err
+
+watch = (files, fn) ->
+  if false #fs.watch should be used, but it's not working properly
+    for file in files
+      do ->
+        currentFile = file
+        fs.watch currentFile, (event) ->
+          fn(currentFile) if event is 'change'
+  else
+    for file in files
+      do ->
+        currentFile = file
+        fs.watchFile currentFile, {persistent: true, interval: 500}, (curr, prev) ->
+          fn(currentFile) unless curr.size is prev.size and curr.mtime.getTime() is prev.mtime.getTime()
+
+compile = (input_path, output_directory) ->
+  fs.readFile input_path, 'utf-8', (err, contents) ->
+    handle_error err
+
+    name = path.basename input_path, path.extname(input_path)
+
+    output = cm.render contents, options
+    ext = '.html'
+
+    if options.print
+      log output
+    else
+      write input_path, name, output, output_directory, ext
+
+write = (input_path, name, contents, output_directory, ext) ->
+  filename = name + ext
+  dir = output_directory or path.dirname input_path
+  exists = fs.exists or path.exists
+  exists dir, (exists) ->
+    unless exists then fs.mkdirSync dir
+    
+    output_path = path.join dir, filename
+    contents = ' ' if contents.length <= 0
+    fs.writeFile output_path, contents, (err) ->
+      handle_error err
+      log "Compiled #{input_path}" if options.watch
+
+usage = '''
+  Usage:
+    coffeemugg [options] path/to/template.coffee
+'''
+
+switches = [
+  ['-w', '--watch', 'watch templates for changes, and recompile']
+  ['-o', '--output [dir]', 'set the directory for compiled html']
+  ['-p', '--print', 'print the compiled html to stdout, don\'t write file']
+  ['-f', '--format', 'apply line breaks and indentation to html output']
+  ['-v', '--version', 'display coffeemugg version']
+  ['-h', '--help', 'display this help message']
+]
+ 
+@run = ->
+  parser = new OptionParser switches, usage
+  options = parser.parse argv
+  args = options.arguments
+  delete options.arguments
+
+  log parser.help() if options.help or argv.length is 0
+  log cm.version if options.version
+
+  if args.length > 0
+    files = args[..]
+
+    if options.watch
+      watch files, (file) ->
+        compile file, options.output
+    else
+      for file in files
+        compile file, options.output
+
+@run()

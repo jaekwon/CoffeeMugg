@@ -1,5 +1,6 @@
 if window?
   coffeemugg = window.CoffeeMug = {}
+  coffee = if CoffeeScript? then CoffeeScript else null
   logger = {
     debug: (msg) -> console.log "debug: #{msg}"
     info:  (msg) -> console.log "info: #{msg}"
@@ -9,6 +10,7 @@ if window?
 else
   coffeemugg = exports
   logger = require('nogg').logger('coffeemugg')
+  coffee = require 'coffee-script'
 
 coffeemugg.version = '0.0.2'
 
@@ -25,6 +27,20 @@ coffeemugg.doctypes =
   'basic': '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML Basic 1.1//EN" "http://www.w3.org/TR/xhtml-basic/xhtml-basic11.dtd">'
   'mobile': '<!DOCTYPE html PUBLIC "-//WAPFORUM//DTD XHTML Mobile 1.2//EN" "http://www.openmobilealliance.org/tech/DTD/xhtml-mobile12.dtd">'
   'ce': '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "ce-html-1.0-transitional.dtd">'
+
+# CoffeeScript-generated JavaScript may contain anyone of these; but when we
+# take a function to string form to manipulate it, and then recreate it through
+# the `Function()` constructor, it loses access to its parent scope and
+# consequently to any helpers it might need. So we need to reintroduce these
+# inside any "rewritten" function.
+# From coffee-script/lib/coffee-script/nodes.js under UTILITIES
+coffeescript_helpers = """
+  var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+  __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+  __hasProp = {}.hasOwnProperty,
+  __slice = [].slice;
+""".replace /\n/g, ''
 
 # Private HTML element reference.
 # Please mind the gap (1 space at the beginning of each subsequent line).
@@ -129,6 +145,22 @@ exports.CMContext = class CMContext
     @render_contents(contents)
     @text "<![endif]-->"
     @newline()
+
+  coffeescript: (param) ->
+    switch typeof param
+      # `coffeescript -> alert 'hi'` becomes:
+      # `<script>;(function () {return alert('hi');})();</script>`
+      when 'function'
+        @script "#{coffeescript_helpers}(#{param}).call(this);"
+      # `coffeescript "alert 'hi'"` becomes:
+      # `<script type="text/coffeescript">alert 'hi'</script>`
+      when 'string'
+        @script type: 'text/coffeescript', -> param
+      # `coffeescript src: 'script.coffee'` becomes:
+      # `<script type="text/coffeescript" src="script.coffee"></script>`
+      when 'object'
+        param.type = 'text/coffeescript'
+        @script param
 
   repeat: (string, count) ->
     Array(count + 1).join string
@@ -272,10 +304,14 @@ exports.CMContext = class CMContext
 #   context:    Dynamically extend the CMContext instance
 coffeemugg.render = (template, options, args...) ->
   context = new CMContext(options)
+  if typeof template is 'string' and coffee?
+    eval "template = function () {#{coffee.compile template, bare: yes}}"
   return context.render_contents(template, args...).toString()
 
 # print the rendered buffer structure
 coffeemugg.debug = (template, options, args...) ->
   options.format ?= on if options
   context = new CMContext(options)
+  if typeof template is 'string' and coffee?
+    eval "template = function () {#{coffee.compile template, bare: yes}}"
   console.log context.render_contents(template, args...).debugString()
