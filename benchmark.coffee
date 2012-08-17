@@ -1,10 +1,25 @@
 coffeemugg = require './src/coffeemugg'
-coffeekup = require 'coffeekup'
-jade = require 'jade'
-ejs = require 'ejs'
-eco = require 'eco'
-haml = require 'haml'
 log = console.log
+try
+  coffeekup = require 'coffeecup'
+catch e
+  log "coffeecup not installed"
+try
+  jade = require 'jade'
+catch e
+  log "jade not installed"
+try
+  ejs = require 'ejs'
+catch e
+  log "ejs not installed"
+try
+  eco = require 'eco'
+catch e
+  log "eco not installed"
+try
+  haml = require 'haml'
+catch e
+  log "haml not installed"
 
 data =
   title: 'test'
@@ -131,7 +146,7 @@ coffeekup_string_template = """
             li -> a href: "mailto:\#{user.email}", -> user.email
 """
 
-coffeekup_compiled_template = coffeekup.compile coffeekup_template
+coffeekup_compiled_template = coffeekup.compile coffeekup_template if coffeekup
 
 jade_template = '''
   !!! 5
@@ -157,7 +172,7 @@ jade_template = '''
               a(href="mailto:"+user.email)= user.email
 '''
 
-jade_compiled_template = jade.compile jade_template
+jade_compiled_template = jade.compile jade_template if jade
 
 ejs_template = '''
   <!DOCTYPE html>
@@ -247,11 +262,11 @@ haml_template = '''
               %a{href: "mailto:#{user.email}"}= user.email
 '''
 
-haml_template_compiled = haml(haml_template)
+haml_template_compiled = haml(haml_template) if haml
 
 benchmark = (title, code) ->
   start = new Date
-  for i in [1..5000]
+  for i in [1..15000]
     code()
   log "#{title}: #{new Date - start} ms"
 
@@ -259,25 +274,41 @@ benchmark = (title, code) ->
   benchmark 'CoffeeMugg (none)', -> coffeemugg.render coffeemugg_template
   benchmark 'CoffeeMugg (args)', -> coffeemugg.render coffeemugg_template_args, null, data
   benchmark 'CoffeeMugg (context)', -> coffeemugg.render coffeemugg_template_context, context: {data: data}
+  benchmark 'CoffeeMugg (format) (none)', -> coffeemugg.render coffeemugg_template, format: on
+  context = new coffeemugg.CMContext
+  benchmark 'CoffeeMugg (reuse context)', ->
+    context.render coffeemugg_template
 
   console.log '\n'
 
-  benchmark 'CoffeeKup (precompiled)', -> coffeekup_compiled_template data
-  benchmark 'Jade (precompiled)', -> jade_compiled_template data
-  benchmark 'haml-js (precompiled)', -> haml_template_compiled data
-  benchmark 'Eco', -> eco.render eco_template, data
+  if coffeekup
+    benchmark 'CoffeeKup (precompiled)', -> coffeekup_compiled_template data
+  if jade
+    benchmark 'Jade (precompiled)', -> jade_compiled_template data
+  if haml
+    benchmark 'haml-js (precompiled)', -> haml_template_compiled data
+  if eco
+    benchmark 'Eco', -> eco.render eco_template, data
 
   console.log '\n'
 
-  benchmark 'CoffeeKup (function, cache on)', -> coffeekup.render coffeekup_template, data, cache: on
-  benchmark 'CoffeeKup (string, cache on)', -> coffeekup.render coffeekup_string_template, data, cache: on
-  benchmark 'Jade (cache on)', -> jade.render jade_template, locals: data, cache: on, filename: 'test'
-  benchmark 'ejs (cache on)', -> ejs.render ejs_template, locals: data, cache: on, filename: 'test'
+  if coffeekup
+    benchmark 'CoffeeKup (function, cache on)', -> coffeekup.render coffeekup_template, data, cache: on
+    benchmark 'CoffeeKup (string, cache on)', -> coffeekup.render coffeekup_string_template, data, cache: on
+  ### broken
+  if jade
+    benchmark 'Jade (cache on)', -> jade.render jade_template, locals: data, cache: on, filename: 'test'
+  ###
+  if ejs
+    benchmark 'ejs (cache on)', -> ejs.render ejs_template, locals: data, cache: on, filename: 'test'
 
   console.log '\n'
 
-  benchmark 'CoffeeKup (function, cache off)', -> coffeekup.render coffeekup_template, data
-  benchmark 'CoffeeKup (string, cache off)', -> coffeekup.render coffeekup_string_template, data, cache: off
-  benchmark 'Jade (cache off)', -> jade.render jade_template, locals: data
-  benchmark 'haml-js', -> haml.render haml_template, locals: data
-  benchmark 'ejs (cache off)', -> ejs.render ejs_template, locals: data
+  ### broken
+  if jade
+    benchmark 'Jade (cache off)', -> jade.render jade_template, locals: data
+  ###
+  if haml
+    benchmark 'haml-js', -> haml.render haml_template, locals: data
+  if ejs
+    benchmark 'ejs (cache off)', -> ejs.render ejs_template, locals: data
