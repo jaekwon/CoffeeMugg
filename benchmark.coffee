@@ -254,8 +254,6 @@ benchmark = (title, code) ->
   context = coffeemugg.CMContext()
   benchmark 'CoffeeMugg (reuse context)', ->
     context.reset().render coffeemugg_template
-  benchmark 'CoffeeMugg (reuse context)', ->
-    context.reset().render coffeemugg_template
 
   console.log '\n'
 

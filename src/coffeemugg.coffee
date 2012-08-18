@@ -81,16 +81,26 @@ coffeemugg.tags = merge_elements 'regular', 'obsolete', 'void', 'obsolete_void'
 # Public/customizable list of elements that should be rendered self-closed.
 coffeemugg.self_closing = merge_elements 'void', 'obsolete_void'
 
-# A unique token that represents a newline.
-NEWLINE = new Object()
+# A unique object that represents a newline.
+NEWLINE = {}
 
 # The rendering context and renderer.
-# Call <CMContext>.extend() to extend with more helper functions.
+# 
+# Usage:
+# 
+#   context = CMContext({
+#     format:yes,
+#     autoescape:yes,
+#     plugins:['sample_plugin_module']
+#   })
+#   result = context.render(myTemplateFunction, args...)
+# 
 # options:
 #   format:     Format with newlines and tabs (default off)
 #   autoescape: Autoescape all strings (default off)
-#   context:    Dynamically extend the CMContext instance
-@CMContext = CMContext = (options={}) ->
+#   plugins:    Array of plugins, which are functions that take a context as argument.
+# 
+coffeemugg.CMContext = CMContext = (options={}) ->
   options.format      ||= on
   options.autoescape  ||= off
 
@@ -100,7 +110,16 @@ NEWLINE = new Object()
     _newline:  ''
     _indent:   ''
 
-    renderTag: (name, args) ->
+    # Main entry function for a context object
+    render: (contents, args...) ->
+      if typeof contents is 'string' and coffee?
+        eval "contents = function () {#{coffee.compile contents, bare: yes}}"
+      @reset()
+      if typeof contents is 'function'
+        contents.call(this, args...)
+      this
+
+    render_tag: (name, args) ->
       # get idclass, attrs, contents
       for a in args
         switch typeof a
@@ -119,17 +138,17 @@ NEWLINE = new Object()
               else
                 contents = a
       @text "#{@_newline}#{@_indent}<#{name}"
-      @renderIdClass(idclass) if idclass
-      @renderAttrs(attrs) if attrs
+      @render_idclass(idclass) if idclass
+      @render_attrs(attrs) if attrs
       if name in coffeemugg.self_closing
         @text ' />'
       else
         @text '>'
-        @renderContents(contents)
+        @render_contents(contents)
         @text "</#{name}>"
       NEWLINE
 
-    renderIdClass: (str) ->
+    render_idclass: (str) ->
       classes = []
       str = String(str).replace /"/, "&quot;"
       for i in str.split '.'
@@ -140,7 +159,7 @@ NEWLINE = new Object()
       @text " id=\"#{id}\"" if id
       @text " class=\"#{classes.join ' '}\"" if classes.length > 0
 
-    renderAttrs: (obj) ->
+    render_attrs: (obj) ->
       for k, v of obj
         # true is rendered as `selected="selected"`.
         if typeof v is 'boolean' and v
@@ -150,15 +169,7 @@ NEWLINE = new Object()
           # strings, numbers, objects, arrays and functions are rendered "as is".
           @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
 
-    render: (contents, args...) ->
-      if typeof contents is 'string' and coffee?
-        eval "contents = function () {#{coffee.compile contents, bare: yes}}"
-      @_newline = ''
-      if typeof contents is 'function'
-        contents.call(this, args...)
-      this
-
-    renderContents: (contents, args...) ->
+    render_contents: (contents, args...) ->
       if typeof contents is 'function'
         @_indent += '  ' if @options.format
         contents = contents.call(this, args...)
@@ -188,7 +199,7 @@ NEWLINE = new Object()
       null
 
     tag: (name, args...) ->
-      @renderTag(name, args)
+      @render_tag(name, args)
 
     comment: (cmt) ->
       @text "#{@_newline}#{@_indent}<!--#{cmt}-->"
@@ -208,21 +219,23 @@ NEWLINE = new Object()
   plugins.unshift HTMLPlugin
   for plugin in plugins
     plugin = require(plugin) if typeof plugin is 'string'
-    plugin.installOn context
+    plugin(context)
   
   return context
 
-HTMLPlugin = installOn: (context) ->
+# This is what a plugin looks like.
+# HTMLPlugin is installed by default.
+HTMLPlugin = (context) ->
 
   # Tag functions
   for tag in coffeemugg.tags.concat(coffeemugg.self_closing) then do (tag) =>
     context[tag] = ->
-      @renderTag(tag, arguments)
+      @render_tag(tag, arguments)
 
   # Special functions
   context.ie = (condition, contents) ->
     @text "#{@_newline}#{@_indent}<!--[if #{condition}]>"
-    @renderContents(contents)
+    @render_contents(contents)
     @text "<![endif]-->"
     NEWLINE
 
@@ -244,11 +257,19 @@ HTMLPlugin = installOn: (context) ->
 
   return context
 
-# convenience, render template to string
+# Convenience, render template to string using the global renderer.
 # options:
 #   format:     Format with newlines and tabs (default off)
 #   autoescape: Whether to autoescape all strings (default off)
-#   plugins:    Array of plugins that have an installOn(context) function
+g_context = undefined
 coffeemugg.render = (template, options, args...) ->
-  context = CMContext(options)
-  return context.render(template, args...).toString()
+  if options?.plugins?
+    throw new Error "To install plugins to the global renderer, you must call coffeemugg.install_plugin."
+  g_context ?= CMContext()
+  g_context.options = options if options?
+  return g_context.render(template, args...).toString()
+
+# Conveience, add a plugin to the global renderer.
+coffeemugg.install_plugin = (plugin) ->
+  plugin = require(plugin) if typeof plugin is 'string'
+  plugin(g_context)
