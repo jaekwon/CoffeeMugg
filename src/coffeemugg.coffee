@@ -335,20 +335,23 @@ HTMLPlugin = (context) ->
       valid_css_prop[p] = true
     
     # TODO: prefixing of e.g. border-radius
-    parse_prop = (prop, val, parent) ->
+    parse_prop = (prop, val, parent, open) ->
       #  _ to -
       t = prop.replace /_/g, '-'
       prop = t if valid_css_prop[t]
       if typeof val is 'object'
         # subselector
-        # Not great-looking CSS here
         @text "#{@_newline}#{@_indent}}"
         parse_selector.call @, prop, val, parent
-        @text "#{@_newline}#{@_indent}#{parent} {"
-      else if typeof val is 'number'
-        @text "#{@_newline}#{@_indent}#{prop}: #{val}#{@unit};" 
+        return no
       else
-        @text "#{@_newline}#{@_indent}#{prop}: #{val};" 
+        # CSS property
+        @text "#{@_newline}#{@_indent}#{parent} {" unless open
+        if typeof val is 'number'
+          @text "#{@_newline}#{@_indent}#{prop}: #{val}#{@unit};"
+        else
+          @text "#{@_newline}#{@_indent}#{prop}: #{val};"
+        return yes
 
     parse_selector = (selector, obj, parent) ->
       if parent
@@ -361,18 +364,18 @@ HTMLPlugin = (context) ->
               "#{p} #{s}"
         selector = selectors.join ','
 
-      @text "#{@_newline}#{@_indent}#{selector} {"
+      open = no
       @_indent += '  ' if @options.format
       if obj instanceof Array
         for o in obj then for prop, val of o
-          parse_prop.call @, prop, val, selector
+          open = parse_prop.call @, prop, val, selector, open
       else if typeof obj is 'object'
         for prop, val of obj
-          parse_prop.call @, prop, val, selector
+          open = parse_prop.call @, prop, val, selector, open
       else
         throw new Error "Don't know what to do with #{obj}"
       @_indent = @_indent[2..] if @options.format
-      @text "#{@_newline}#{@_indent}}"
+      @text "#{@_newline}#{@_indent}}" if open
 
     context.unit = 'px'
     context.css = (args...) ->

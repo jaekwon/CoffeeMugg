@@ -162,7 +162,7 @@ tests =
           "td, th":
             color: "red"
         ]
-    expected: '<style>.header {border-color: #3bbfce;}.header div {padding: 7px;}.header {}#data, #entry {float: left;margin-left: 10px;font: serif;}#data td,#data th,#entry td,#entry th {color: red;}#data, #entry {}</style>'
+    expected: '<style>.header {border-color: #3bbfce;}.header div {padding: 7px;}#data, #entry {float: left;margin-left: 10px;font: serif;}#data td,#data th,#entry td,#entry th {color: red;}</style>'
 
 cm = require './src/coffeemugg'
 
