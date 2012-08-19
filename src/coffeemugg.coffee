@@ -372,11 +372,10 @@ HTMLPlugin = (context) ->
       line = "#{prop}: #{val}"
       line += @unit if typeof val is 'number'
       line += ";"
+      @text "#{@_newline}#{@_indent}#{line}"
       if prefixed_css_prop[prop]
-        for pre in [ "", "ms-", "-moz-", "-webkit-" ]
+        for pre in [ "ms-", "-moz-", "-webkit-" ]
           @text "#{@_newline}#{@_indent}#{pre}#{line}"
-      else
-        @text "#{@_newline}#{@_indent}#{line}"
       return yes
 
   parse_selector = (selector, obj, parent) ->
