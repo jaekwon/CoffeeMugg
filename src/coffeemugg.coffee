@@ -195,7 +195,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
 
     text: (txt) ->
       @_buffer += txt
-      @_newline = '\n'
+      @_newline = '\n' if @options.format
       null
 
     tag: (name, args...) ->
