@@ -143,6 +143,27 @@ tests =
       @coffeescript src: 'script.coffee'
     expected: '''<script src="script.coffee" type="text/coffeescript"></script>'''
 
+  # Need to split these up in individual tests
+  'CSS':
+    template: ->
+      blue = '#3bbfce'
+      left = (dist) ->
+        float: "left"
+        margin_left: dist
+      @unit = 'px'
+      @style -> @css
+        ".header":
+          border_color: blue
+          div:
+            padding: 7
+        "#data, #entry": [
+          left 10
+          font: "serif"
+          "td, th":
+            color: "red"
+        ]
+    expected: '<style>.header {border-color: #3bbfce;}.header div {padding: 7px;}.header {}#data, #entry {float: left;margin-left: 10px;font: serif;}#data td,#data th,#entry td,#entry th {color: red;}#data, #entry {}</style>'
+
 cm = require './src/coffeemugg'
 
 @run = ->
