@@ -341,7 +341,7 @@ HTMLPlugin = (context) ->
       prop = t if valid_css_prop[t]
       if typeof val is 'object'
         # subselector
-        @text "#{@_newline}#{@_indent}}"
+        @text "#{@_newline}#{@_indent}}" if open
         parse_selector.call @, prop, val, parent
         return no
       else
