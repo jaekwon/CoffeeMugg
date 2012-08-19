@@ -143,7 +143,6 @@ tests =
       @coffeescript src: 'script.coffee'
     expected: '''<script src="script.coffee" type="text/coffeescript"></script>'''
 
-  # Need to split these up in individual tests
   'CSS':
     template: ->
       blue = '#3bbfce'
@@ -163,6 +162,37 @@ tests =
             color: "red"
         ]
     expected: '<style>.header {border-color: #3bbfce;}.header div {padding: 7px;}#data, #entry {float: left;margin-left: 10px;font: serif;}#data td,#data th,#entry td,#entry th {color: red;}</style>'
+
+  'CSS subselector':
+    template: ->
+      @css
+        "sel1,sel2":
+          "subsel1, subsel2":
+            foo: "bar"
+          moo: "mar"
+    expected: 'sel1 subsel1,sel1 subsel2,sel2 subsel1,sel2 subsel2 {foo: bar;}sel1,sel2 {moo: mar;}'
+
+  'CSS unit':
+    template: ->
+      @unit = 'em'
+      @css
+        "selector":
+          border: 1
+    expected: 'selector {border: 1em;}'
+
+  'CSS _ to -':
+    template: ->
+      @css
+        "selector":
+          border_color: "foo"
+    expected: 'selector {border-color: foo;}'
+
+  'CSS prefix':
+    template: ->
+      @css
+        "selector":
+          animation: "foo"
+    expected: 'selector {animation: foo;ms-animation: foo;-moz-animation: foo;-webkit-animation: foo;}'
 
 cm = require './src/coffeemugg'
 
