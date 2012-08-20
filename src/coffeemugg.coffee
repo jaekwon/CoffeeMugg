@@ -123,7 +123,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
                 idclass = a
               else
                 contents = a
-      @text "#{@_newline}#{@_indent}<#{name}"
+      @textnl "<#{name}"
       @render_idclass(idclass) if idclass
       @render_attrs(attrs) if attrs
       if name in coffeemugg.self_closing
@@ -161,7 +161,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         contents = contents.call(this, args...)
         @_indent = @_indent[2..] if @options.format
         if contents is NEWLINE
-          @text "#{@_newline}#{@_indent}"
+          @textnl ""
       switch typeof contents
         when 'string', 'number', 'boolean'
           @text @esc(contents)
@@ -179,6 +179,9 @@ coffeemugg.CMContext = CMContext = (options={}) ->
     doctype: (type = 'default') ->
       @text @_indent + coffeemugg.doctypes[type]
 
+    textnl: (txt) ->
+      @text "#{@_newline}#{@_indent}#{txt}"
+
     text: (txt) ->
       @_buffer += txt
       @_newline = '\n' if @options.format
@@ -188,7 +191,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
       @render_tag(name, args)
 
     comment: (cmt) ->
-      @text "#{@_newline}#{@_indent}<!--#{cmt}-->"
+      @textnl "<!--#{cmt}-->"
       NEWLINE
 
     toString: ->
@@ -220,7 +223,7 @@ HTMLPlugin = (context) ->
 
   # Special functions
   context.ie = (condition, contents) ->
-    @text "#{@_newline}#{@_indent}<!--[if #{condition}]>"
+    @textnl "<!--[if #{condition}]>"
     @render_contents(contents)
     @text "<![endif]-->"
     NEWLINE
@@ -363,19 +366,19 @@ HTMLPlugin = (context) ->
 
     if typeof val is 'object'
       # subselector
-      @text "#{@_newline}#{@_indent}}" if open
+      @textnl "}" if open
       parse_selector.call @, prop, val, parent
       return no
     else
       # CSS property
-      @text "#{@_newline}#{@_indent}#{parent} {" unless open
+      @textnl "#{parent} {" unless open
       line = "#{prop}: #{val}"
       line += @unit if typeof val is 'number'
       line += ";"
-      @text "#{@_newline}#{@_indent}#{line}"
+      @textnl line
       if prefixed_css_prop[prop]
         for pre in [ "ms-", "-moz-", "-webkit-" ]
-          @text "#{@_newline}#{@_indent}#{pre}#{line}"
+          @textnl "#{pre}#{line}"
       return yes
 
   parse_selector = (selector, obj, parent) ->
@@ -400,7 +403,7 @@ HTMLPlugin = (context) ->
     else
       throw new Error "Don't know what to do with #{obj}"
     @_indent = @_indent[2..] if @options.format
-    @text "#{@_newline}#{@_indent}}" if open
+    @textnl "}" if open
 
   context.unit = 'px'
   context.css = (args...) ->
