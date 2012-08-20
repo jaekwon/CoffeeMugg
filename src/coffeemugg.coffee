@@ -29,34 +29,37 @@ coffeemugg.doctypes =
   'ce': '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "ce-html-1.0-transitional.dtd">'
 
 # Private HTML element reference.
-# Please mind the gap (1 space at the beginning of each subsequent line).
 elements =
   # Valid HTML 5 elements requiring a closing tag.
-  # Note: the `var` element is out for obvious reasons, please use `tag 'var'`.
-  regular: 'a abbr address article aside audio b bdi bdo blockquote body button
- canvas caption cite code colgroup datalist dd del details dfn div dl dt em
- fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup
- html i iframe ins kbd label legend li map mark menu meter nav noscript object
- ol optgroup option output p pre progress q rp rt ruby s samp script section
- select small span strong style sub summary sup table tbody td textarea tfoot
- th thead time title tr u ul video'
+  regular: '''
+    a abbr address article aside audio b bdi bdo blockquote body button canvas
+    caption cite code colgroup datalist dd del details dfn div dl dt em fieldset
+    figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup html i
+    iframe ins kbd label legend li map mark menu meter nav noscript object ol
+    optgroup option output p pre progress q rp rt ruby s samp script section
+    select small span strong style sub summary sup table tbody td textarea tfoot
+    th thead time title tr u ul var video
+  '''.split /\s+/
 
   # Valid self-closing HTML 5 elements.
-  void: 'area base br col command embed hr img input keygen link meta param
- source track wbr'
+  void: '''
+    area base br col command embed hr img input keygen link meta param
+    source track wbr
+  '''.split /\s+/
 
-  obsolete: 'applet acronym bgsound dir frameset noframes isindex listing
- nextid noembed plaintext rb strike xmp big blink center font marquee multicol
- nobr spacer tt'
+  obsolete: '''
+    applet acronym bgsound dir frameset noframes isindex listing nextid noembed
+    plaintext rb strike xmp big blink center font marquee multicol nobr spacer tt
+  '''.split /\s+/
 
-  obsolete_void: 'basefont frame'
+  obsolete_void: 'basefont frame'.split /\s+/
 
 # Create a unique list of element names merging the desired groups.
 merge_elements = (args...) ->
-  result = []
+  result = {}
   for a in args
-    for element in elements[a].split ' '
-      result.push element unless result.indexOf(element) > -1
+    for element in elements[a]
+      result[element] = true
   result
 
 # Public/customizable list of possible elements.
@@ -126,7 +129,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
       @textnl "<#{name}"
       @render_idclass(idclass) if idclass
       @render_attrs(attrs) if attrs
-      if name in coffeemugg.self_closing
+      if coffeemugg.self_closing[name]
         @text ' />'
       else
         @text '>'
@@ -217,9 +220,10 @@ coffeemugg.CMContext = CMContext = (options={}) ->
 HTMLPlugin = (context) ->
 
   # Tag functions
-  for tag in coffeemugg.tags.concat(coffeemugg.self_closing) then do (tag) =>
-    context[tag] = ->
-      @render_tag(tag, arguments)
+  for tags in [ coffeemugg.tags, coffeemugg.self_closing ]
+    for tag of tags then do (tag) =>
+      context[tag] = ->
+        @render_tag(tag, arguments)
 
   # Special functions
   context.ie = (condition, contents) ->
