@@ -279,8 +279,8 @@ HTMLPlugin = (context) ->
       if t.indexOf(k) >= 0
         helpers += ',' if helpers
         helpers += "#{k}=#{v}"
-    helpers = "var #{helpers};" if helpers
-    "#{helpers}(#{t}).call(this);"
+    t = t.replace(/^[^{]+{/, "function(){var #{helpers};") if helpers
+    "(#{t}).call(this);"
 
   context.coffeescript = (param) ->
     switch typeof param

@@ -103,7 +103,7 @@ tests =
   'Attribute values':
     template: ->
       @br vrai: yes, faux: no, undef: @foo, nil: null, str: 'str', num: 42, arr: [1, 2, 3], obj: {foo: 'bar'}, func: ->,
-    expected: '<br vrai="vrai" str="str" num="42" arr="1,2,3" obj="[object Object]" func="function () {}" />'
+    expected: '<br vrai="vrai" str="str" num="42" arr="1,2,3" obj="[object Object]" func="(function () {}).call(this);" />'
     
   'IE conditionals':
     template: ->
@@ -129,9 +129,15 @@ tests =
     template: ->
       @coffeescript ->
         f a, b...
-    expected: '<script>var __slice=[].slice;(function () {\n          return f.apply(null, [a].concat(__slice.call(b)));\n        }).call(this);</script>'
+    expected: '<script>(function(){var __slice=[].slice;\n          return f.apply(null, [a].concat(__slice.call(b)));\n        }).call(this);</script>'
     # This gets retained somehow?
     options: {format: no}
+
+  'CoffeeScript function in tag':
+    template: ->
+      @div onmouseover: ->
+        f "&&a", b...
+    expected: '<div onmouseover="(function(){var __slice=[].slice;\n            return f.apply(null, [&quot;&amp;&amp;a&quot;].concat(__slice.call(b)));\n          }).call(this);"></div>'
 
   'CoffeeScript string':
     template: ->
