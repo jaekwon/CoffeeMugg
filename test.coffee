@@ -128,8 +128,8 @@ tests =
   'CoffeeScript function':
     template: ->
       @coffeescript ->
-        alert 'hi'
-    expected: '''<script>var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child;},__bind = function(fn, me){ return function(){ return fn.apply(me, arguments); };},__indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1;},__hasProp = {}.hasOwnProperty,__slice = [].slice;(function () {\n          return alert('hi');\n        }).call(this);</script>'''
+        f a, b...
+    expected: '<script>var __slice=[].slice;(function () {\n          return f.apply(null, [a].concat(__slice.call(b)));\n        }).call(this);</script>'
     # This gets retained somehow?
     options: {format: no}
 

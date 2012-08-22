@@ -154,8 +154,10 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         if typeof v is 'boolean' and v
           v = k
         # undefined, false and null result in the attribute not being rendered.
+        else if typeof v is 'function'
+          v = @csToString v
         if v
-          # strings, numbers, objects, arrays and functions are rendered "as is".
+          # strings, numbers, objects and arrays are rendered "as is"
           @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
 
     render_contents: (contents, args...) ->
@@ -239,36 +241,51 @@ HTMLPlugin = (context) ->
   # consequently to any helpers it might need. So we need to reintroduce these
   # inside any "rewritten" function.
   # From coffee-script/lib/coffee-script/nodes.js under UTILITIES
-  coffeescript_helpers = """
-    var __extends = function(child, parent) {
-      for (var key in parent) {
-        if (__hasProp.call(parent, key)) child[key] = parent[key];
+  coffeescript_helpers =
+    __extends: """
+      function(child, parent) {
+        for (var key in parent) {
+          if (__hasProp.call(parent, key)) child[key] = parent[key];
+        }
+        function ctor() { this.constructor = child; }
+        ctor.prototype = parent.prototype;
+        child.prototype = new ctor();
+        child.__super__ = parent.prototype;
+        return child;
       }
-      function ctor() { this.constructor = child; }
-      ctor.prototype = parent.prototype;
-      child.prototype = new ctor();
-      child.__super__ = parent.prototype;
-      return child;
-    },
-    __bind = function(fn, me){
-      return function(){ return fn.apply(me, arguments); };
-    },
-    __indexOf = [].indexOf || function(item) {
-      for (var i = 0, l = this.length; i < l; i++) {
-        if (i in this && this[i] === item) return i;
+    """.replace(/\s+/g, ' ')
+    __bind: """
+      function(fn, me){
+        return function(){ return fn.apply(me, arguments); };
       }
-      return -1;
-    },
-    __hasProp = {}.hasOwnProperty,
-    __slice = [].slice;
-  """.replace(/\ +/g, ' ').replace /\n/g, ''
+    """.replace(/\s+/g, ' ')
+    __indexOf: """
+      [].indexOf || function(item) {
+        for (var i = 0, l = this.length; i < l; i++) {
+          if (i in this && this[i] === item) return i;
+        }
+        return -1;
+      }
+    """.replace(/\s+/g, ' ')
+    __hasProp: '{}.hasOwnProperty'
+    __slice: '[].slice'
+
+  context.csToString = (aFunction) ->
+    helpers = ''
+    t = "#{aFunction}"
+    for k, v of coffeescript_helpers
+      if t.indexOf(k) >= 0
+        helpers += ',' if helpers
+        helpers += "#{k}=#{v}"
+    helpers = "var #{helpers};" if helpers
+    "#{helpers}(#{t}).call(this);"
 
   context.coffeescript = (param) ->
     switch typeof param
       # `coffeescript -> alert 'hi'` becomes:
       # `<script>;(function () {return alert('hi');})();</script>`
       when 'function'
-        @script "#{coffeescript_helpers}(#{param}).call(this);"
+        @script @csToString param
       # `coffeescript "alert 'hi'"` becomes:
       # `<script type="text/coffeescript">alert 'hi'</script>`
       when 'string'
