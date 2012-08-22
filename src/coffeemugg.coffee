@@ -180,14 +180,15 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         .replace(/"/g, '&quot;')
 
     doctype: (type = 'default') ->
-      @text @_indent + coffeemugg.doctypes[type]
+      @textnl coffeemugg.doctypes[type]
 
     textnl: (txt) ->
       @text "#{@_newline}#{@_indent}#{txt}"
+      @_newline = "\n" if @options.format
+      null
 
     text: (txt) ->
       @_buffer += txt
-      @_newline = '\n' if @options.format
       null
 
     tag: (name, args...) ->
