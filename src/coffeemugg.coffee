@@ -156,9 +156,11 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         # undefined, false and null result in the attribute not being rendered.
         else if typeof v is 'function'
           v = @csToString v
+
         if v
           # strings, numbers, objects and arrays are rendered "as is"
-          @text " #{k}=\"#{String(v).replace(/"/,"&quot;")}\""
+          # http://www.w3.org/TR/html4/appendix/notes.html#h-B.3.2.2
+          @text " #{k}=\"#{String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}\""
 
     render_contents: (contents, args...) ->
       if typeof contents is 'function'
