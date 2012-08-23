@@ -103,7 +103,7 @@ tests =
   'Attribute values':
     template: ->
       @br vrai: yes, faux: no, undef: @foo, nil: null, str: 'str', num: 42, arr: [1, 2, 3], obj: {foo: 'bar'}, func: ->,
-    expected: '<br vrai="vrai" str="str" num="42" arr="1,2,3" obj="[object Object]" func="function () {}" />'
+    expected: '<br vrai="vrai" str="str" num="42" arr="1,2,3" obj="[object Object]" func="(function () {}).call(this);" />'
     
   'IE conditionals':
     template: ->
@@ -128,10 +128,16 @@ tests =
   'CoffeeScript function':
     template: ->
       @coffeescript ->
-        alert 'hi'
-    expected: '''<script>var __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child;},__bind = function(fn, me){ return function(){ return fn.apply(me, arguments); };},__indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1;},__hasProp = {}.hasOwnProperty,__slice = [].slice;(function () {\n          return alert('hi');\n        }).call(this);</script>'''
+        f a, b...
+    expected: '<script>(function(){var __slice=[].slice;\n          return f.apply(null, [a].concat(__slice.call(b)));\n        }).call(this);</script>'
     # This gets retained somehow?
     options: {format: no}
+
+  'CoffeeScript function in tag':
+    template: ->
+      @div onmouseover: ->
+        f "&&a", b...
+    expected: '<div onmouseover="(function(){var __slice=[].slice;\n            return f.apply(null, [&quot;&amp;&amp;a&quot;].concat(__slice.call(b)));\n          }).call(this);"></div>'
 
   'CoffeeScript string':
     template: ->
@@ -143,7 +149,6 @@ tests =
       @coffeescript src: 'script.coffee'
     expected: '''<script src="script.coffee" type="text/coffeescript"></script>'''
 
-  # Need to split these up in individual tests
   'CSS':
     template: ->
       blue = '#3bbfce'
@@ -163,6 +168,37 @@ tests =
             color: "red"
         ]
     expected: '<style>.header {border-color: #3bbfce;}.header div {padding: 7px;}#data, #entry {float: left;margin-left: 10px;font: serif;}#data td,#data th,#entry td,#entry th {color: red;}</style>'
+
+  'CSS subselector':
+    template: ->
+      @css
+        "sel1,sel2":
+          "subsel1, subsel2":
+            foo: "bar"
+          moo: "mar"
+    expected: 'sel1 subsel1,sel1 subsel2,sel2 subsel1,sel2 subsel2 {foo: bar;}sel1,sel2 {moo: mar;}'
+
+  'CSS unit':
+    template: ->
+      @unit = 'em'
+      @css
+        "selector":
+          border: 1
+    expected: 'selector {border: 1em;}'
+
+  'CSS _ to -':
+    template: ->
+      @css
+        "selector":
+          border_color: "foo"
+    expected: 'selector {border-color: foo;}'
+
+  'CSS prefix':
+    template: ->
+      @css
+        "selector":
+          animation: "foo"
+    expected: 'selector {animation: foo;ms-animation: foo;-moz-animation: foo;-webkit-animation: foo;}'
 
 cm = require './src/coffeemugg'
 
