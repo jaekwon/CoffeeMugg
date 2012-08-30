@@ -1,15 +1,8 @@
 if window?
   coffeemugg = window.CoffeeMug = {}
   coffee = if CoffeeScript? then CoffeeScript else null
-  logger = {
-    debug: (msg) -> console.log "debug: #{msg}"
-    info:  (msg) -> console.log "info: #{msg}"
-    warn:  (msg) -> console.log "warn: #{msg}"
-    error: (msg) -> console.log "error: #{msg}"
-  }
 else
   coffeemugg = exports
-  logger = require('nogg').logger('coffeemugg')
   coffee = require 'coffee-script'
 
 coffeemugg.version = '0.0.2'
@@ -147,6 +140,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
           classes.push i unless i is ''
       @text " id=\"#{id}\"" if id
       @text " class=\"#{classes.join ' '}\"" if classes.length > 0
+      null
 
     render_attrs: (obj) ->
       for k, v of obj
@@ -161,6 +155,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
           # strings, numbers, objects and arrays are rendered "as is"
           # http://www.w3.org/TR/html4/appendix/notes.html#h-B.3.2.2
           @text " #{k}=\"#{String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}\""
+      null
 
     render_contents: (contents, args...) ->
       if typeof contents is 'function'
@@ -441,6 +436,7 @@ HTMLPlugin = (context) ->
           parse_selector.call @, k, v
       else
         throw new Error "@css takes objects or arrays of objects"
+    null
 
   return context
 
