@@ -1,11 +1,14 @@
 if window?
-  coffeemugg = window.CoffeeMug = {}
+  coffeemugg = window.CoffeeMugg = {}
   coffee = if CoffeeScript? then CoffeeScript else null
 else
   coffeemugg = exports
-  coffee = require 'coffee-script'
+  try
+    coffee = require 'coffee-script'
+  catch err
+    coffee = null
 
-coffeemugg.version = '0.0.2'
+coffeemugg.version = '0.0.4'
 
 # Values available to the `doctype` function inside a template.
 # Ex.: `doctype 'strict'`
@@ -94,7 +97,8 @@ coffeemugg.CMContext = CMContext = (options={}) ->
 
     # Main entry function for a context object
     render: (contents, args...) ->
-      if typeof contents is 'string' and coffee?
+      if typeof contents is 'string'
+        throw Error "Need module 'coffee-script' to compile code." if not coffee?
         eval "contents = function () {#{coffee.compile contents, bare: yes}}"
       @reset()
       if typeof contents is 'function'
@@ -420,7 +424,7 @@ HTMLPlugin = (context) ->
       for prop, val of obj
         open = parse_prop.call @, prop, val, selector, open
     else
-      throw new Error "Don't know what to do with #{obj}"
+      throw Error "Don't know what to do with #{obj}"
     @_indent = @_indent[2..] if @options.format
     @textnl "}" if open
 
@@ -435,7 +439,7 @@ HTMLPlugin = (context) ->
         for k, v of arg
           parse_selector.call @, k, v
       else
-        throw new Error "@css takes objects or arrays of objects"
+        throw Error "@css takes objects or arrays of objects"
     null
 
   return context
@@ -447,7 +451,7 @@ HTMLPlugin = (context) ->
 g_context = undefined
 coffeemugg.render = (template, options, args...) ->
   if options?.plugins?
-    throw new Error "To install plugins to the global renderer, you must call coffeemugg.install_plugin."
+    throw Error "To install plugins to the global renderer, you must call coffeemugg.install_plugin."
   g_context ?= CMContext()
   g_context.options = options if options?
   return g_context.render(template, args...).toString()
