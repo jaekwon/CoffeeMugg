@@ -137,7 +137,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
     render_idclass: (str) ->
       classes = []
       str = String(str).replace /"/, "&quot;"
-      for i in str.split '.'
+      for i in str.split /\s*\.\s*/
         if i[0] is '#'
           id = i[1..]
         else
