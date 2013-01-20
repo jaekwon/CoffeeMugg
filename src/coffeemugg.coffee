@@ -459,4 +459,5 @@ coffeemugg.render = (template, options, args...) ->
 # Conveience, add a plugin to the global renderer.
 coffeemugg.install_plugin = (plugin) ->
   plugin = require(plugin) if typeof plugin is 'string'
+  g_context ?= CMContext()
   plugin(g_context)

@@ -1,7 +1,7 @@
 {
   "name": "coffeemugg",
   "description": "HTML templating with CoffeeScript.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Jae Kwon <jkwon.work@gmail.com>",
   "repository": {"type": "git", "url": "git://github.com/jaekwon/coffeemugg.git"},
   "dependencies": {"coffee-script": ">= 1.1.2"},
@@ -10,6 +10,7 @@
   "main": "./lib/coffeemugg",
   "engines": {"node": ">= 0.4.7"},
   "contributors": [
-    "Maurice Machado <maurice@bitbending.com>"
+    "Maurice Machado <maurice@bitbending.com>",
+    "W. Mertens <https://github.com/wmertens>"
   ]
 }
