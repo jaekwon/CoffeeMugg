@@ -66,6 +66,13 @@ coffeemugg.tags = merge_elements 'regular', 'obsolete', 'void', 'obsolete_void'
 # Public/customizable list of elements that should be rendered self-closed.
 coffeemugg.self_closing = merge_elements 'void', 'obsolete_void'
 
+# HTML escape function
+htmlEscape = (txt) ->
+  String(txt).replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
 # A unique object that represents a newline.
 NEWLINE = {}
 
@@ -86,14 +93,18 @@ NEWLINE = {}
 #   plugins:    Array of plugins, which are functions that take a context as argument.
 # 
 coffeemugg.CMContext = CMContext = (options={}) ->
-  options.format      ||= on
-  options.autoescape  ||= off
 
   context =
-    options:   options
+    options:   undefined  # see 'setOptions'
     _buffer:   ''
     _newline:  ''
     _indent:   ''
+
+    setOptions: (options) ->
+      options.format      ?= on
+      options.autoescape  ?= off
+      @options = options
+      return @
 
     # Main entry function for a context object
     render: (contents, args...) ->
@@ -123,15 +134,15 @@ coffeemugg.CMContext = CMContext = (options={}) ->
                 idclass = a
               else
                 contents = a
-      @textnl "<#{name}"
+      @rawnl "<#{name}"
       @render_idclass(idclass) if idclass
       @render_attrs(attrs) if attrs
       if coffeemugg.self_closing[name]
-        @text ' />'
+        @raw ' />'
       else
-        @text '>'
+        @raw '>'
         @render_contents(contents)
-        @text "</#{name}>"
+        @raw "</#{name}>"
       NEWLINE
 
     render_idclass: (str) ->
@@ -142,8 +153,8 @@ coffeemugg.CMContext = CMContext = (options={}) ->
           id = i[1..]
         else
           classes.push i unless i is ''
-      @text " id=\"#{id}\"" if id
-      @text " class=\"#{classes.join ' '}\"" if classes.length > 0
+      @raw " id=\"#{id}\"" if id
+      @raw " class=\"#{classes.join ' '}\"" if classes.length > 0
       null
 
     render_attrs: (obj) ->
@@ -158,7 +169,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         if v
           # strings, numbers, objects and arrays are rendered "as is"
           # http://www.w3.org/TR/html4/appendix/notes.html#h-B.3.2.2
-          @text " #{k}=\"#{String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}\""
+          @raw " #{k}=\"#{String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}\""
       null
 
     render_contents: (contents, args...) ->
@@ -167,38 +178,38 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         contents = contents.call(this, args...)
         @_indent = @_indent[2..] if @options.format
         if contents is NEWLINE
-          @textnl ""
+          @rawnl ""
       switch typeof contents
         when 'string', 'number', 'boolean'
-          @text @esc(contents)
+          @text(contents)
       null
 
-    esc: (txt) ->
-      if @options.autoescape then @h(txt) else txt
-
-    h: (txt) ->
-      String(txt).replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
+    h: htmlEscape
 
     doctype: (type = 'default') ->
-      @textnl coffeemugg.doctypes[type]
+      @rawnl coffeemugg.doctypes[type]
 
-    textnl: (txt) ->
-      @text "#{@_newline}#{@_indent}#{txt}"
+    rawnl: (txt) ->
+      @raw "#{@_newline}#{@_indent}#{txt}"
       @_newline = "\n" if @options.format
       null
 
-    text: (txt) ->
+    raw: (txt) ->
       @_buffer += txt
+      null
+
+    text: (txt) ->
+      if @options.autoescape
+        @_buffer += htmlEscape(txt)
+      else
+        @_buffer += txt
       null
 
     tag: (name, args...) ->
       @render_tag(name, args)
 
     comment: (cmt) ->
-      @textnl "<!--#{cmt}-->"
+      @rawnl "<!--#{cmt}-->"
       NEWLINE
 
     toString: ->
@@ -210,13 +221,16 @@ coffeemugg.CMContext = CMContext = (options={}) ->
       @_indent  = ''
       return @
 
+  # Set the options, as specified in the initializer
+  context.setOptions(options)
+
   # Install plugins
   plugins = options.plugins ? []
   plugins.unshift HTMLPlugin
   for plugin in plugins
     plugin = require(plugin) if typeof plugin is 'string'
     plugin(context)
-  
+
   return context
 
 # This is what a plugin looks like.
@@ -231,9 +245,9 @@ HTMLPlugin = (context) ->
 
   # Special functions
   context.ie = (condition, contents) ->
-    @textnl "<!--[if #{condition}]>"
+    @rawnl "<!--[if #{condition}]>"
     @render_contents(contents)
-    @text "<![endif]-->"
+    @raw "<![endif]-->"
     NEWLINE
 
   # CoffeeScript-generated JavaScript may contain anyone of these; but when we
@@ -389,19 +403,19 @@ HTMLPlugin = (context) ->
 
     if typeof val is 'object'
       # subselector
-      @textnl "}" if open
+      @rawnl "}" if open
       parse_selector.call @, prop, val, parent
       return no
     else
       # CSS property
-      @textnl "#{parent} {" unless open
+      @rawnl "#{parent} {" unless open
       line = "#{prop}: #{val}"
       line += @unit if typeof val is 'number'
       line += ";"
-      @textnl line
+      @rawnl line
       if prefixed_css_prop[prop]
         for pre in [ "ms-", "-moz-", "-webkit-" ]
-          @textnl "#{pre}#{line}"
+          @rawnl "#{pre}#{line}"
       return yes
 
   parse_selector = (selector, obj, parent) ->
@@ -426,7 +440,7 @@ HTMLPlugin = (context) ->
     else
       throw Error "Don't know what to do with #{obj}"
     @_indent = @_indent[2..] if @options.format
-    @textnl "}" if open
+    @rawnl "}" if open
 
   context.unit = 'px'
   context.css = (args...) ->
@@ -448,16 +462,19 @@ HTMLPlugin = (context) ->
 # options:
 #   format:     Format with newlines and tabs (default off)
 #   autoescape: Whether to autoescape all strings (default off)
+#   plugins:    Plugins can't be specified here.
+#               Call coffeemugg.install_plugin() instead to install
+#               global plugins, for organizational purposes. 
 g_context = undefined
 coffeemugg.render = (template, options, args...) ->
   if options?.plugins?
     throw Error "To install plugins to the global renderer, you must call coffeemugg.install_plugin."
   g_context ?= CMContext()
-  g_context.options = options if options?
+  g_context.setOptions options if options?
   return g_context.render(template, args...).toString()
 
 # Conveience, add a plugin to the global renderer.
 coffeemugg.install_plugin = (plugin) ->
   plugin = require(plugin) if typeof plugin is 'string'
   g_context ?= CMContext()
-  plugin(g_context)
+  plugin.call(g_context, g_context)

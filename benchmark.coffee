@@ -1,4 +1,4 @@
-coffeemugg = require './src/coffeemugg'
+coffeemugg = require './lib/coffeemugg'
 log = console.log
 try
   coffeekup = require 'coffeecup'

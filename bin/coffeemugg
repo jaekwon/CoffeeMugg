@@ -2,7 +2,7 @@
 #
 # Adapted from https://github.com/gradus/coffeecup/blob/master/src/cli.coffee
 
-cm = require '../src/coffeemugg'
+cm = require '../lib/coffeemugg'
 fs = require 'fs'
 path = require 'path'
 log = console.log

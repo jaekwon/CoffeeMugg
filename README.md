@@ -16,33 +16,40 @@ CoffeeMugg is a branch of [CoffeeKup](https://github.com/mauricemach/coffeekup).
 
 Basic example:
 ```coffeescript
-coffeemugg.render ->
+cm = require 'coffeemugg'
+
+cm.render ->
   @div ->
     @p "I am a paragraph"
+    @raw "<p> This is unescaped, raw HTML </p>"
+    @text "<< This will be escaped ! >>"
 ```
 
-With subroutines:
-```coffeescript
-subroutines = {
-  myroutine: ->
-    @p 'blah blah'
-}
+## Custom TAG functions (subroutines)
 
-template = ->
+You can add custom @TAG functions to coffeemugg with 'plugins'.
+
+```coffeescript
+# Install custom tags! In this case, just the tag '@showFruits'
+cm.install_plugin ->
+
+  # The tag 'showFruits' will become available everywhere.
+  # It is a regular function, so it can take arguments too, like 'fruits'
+  @showFruits = (fruits) ->
+    @ul ->
+      for fruit in fruits
+        @li fruit
+
+# Here is the main template function.
+# Notice that the main template function can also take javascript arguments.
+template = (fruits) ->
   @div ->
-    @myroutine()
+    # Pass in 'fruits' to our custom '@showFruits' tag
+    @showFruits fruits
 
-coffeemugg.render template, {context: subroutines}
-```
-
-With arguments:
-```coffeescript
-template = (div_id, contents) ->
-  @div id:div_id, ->
-    for content in contents
-      @div content
-
-coffeemugg.render template, <OPTIONS>, "FRUITS", ["Apple", "Banana", "Raisin"]
+options = {autoescape:yes}
+fruits  = ['Apple', 'Banana', 'Raisin', 'Rice Crispies', 'Mickey Mouse']
+cm.render template, options, fruits
 ```
 
 ## Installation

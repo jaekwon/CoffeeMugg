@@ -1,4 +1,11 @@
 tests =
+
+  'Raw text':
+    template: ->
+      @raw '<foo/>'
+    expected: '<foo/>'
+      
+
   'Literal text':
     template: ->
       @text 'Just text'
@@ -200,7 +207,7 @@ tests =
           animation: "foo"
     expected: 'selector {animation: foo;ms-animation: foo;-moz-animation: foo;-webkit-animation: foo;}'
 
-cm = require './src/coffeemugg'
+cm = require './lib/coffeemugg'
 
 @run = ->
   {print} = require 'sys'
