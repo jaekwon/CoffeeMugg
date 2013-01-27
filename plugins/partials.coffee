@@ -31,8 +31,15 @@ Usage:
 
 {hotswap} = require 'cardamom'
 
-module.exports = (_require, dir, tag='partial') -> ->
+# This function returns the "plugin installer"
+module.exports = (_require, dir, tag='partial') ->
 
-  @[tag] = partialTag = (partialName, args...) ->
+  # This is the "plugin installer"
+  ->
 
-    hotswap(_require, "#{dir}/#{partialName}").partial.apply(@, args)
+    # This is the "@partial" tag, or whatever you named it.
+    @[tag] = (partialName, args...) ->
+
+      hotswap(_require, "#{dir}/#{partialName}").partial.apply(@, args)
+
+      null

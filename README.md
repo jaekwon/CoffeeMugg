@@ -64,11 +64,21 @@ cm.render template, options, fruits
 ## Sample plugins
 
 Sample plugins are in the 'plugins' directory. The best way to use them is to copy them
-into your project (which manages your dependencies), and install them globally:
+into your project (which manages your dependencies), and install them via 'install_plugin':
 ``` coffeescript
 cm = require 'coffeemugg'
+# Use the 'marked' markdown language.
+# Your project needs to have 'marked' as a dependency.
+# Note, './plugins' is a folder in _your_ project.
 cm.install_plugin require('./plugins/marked')
+# Use the 'partials' system for templating ease.
+# Note, './templates' is a folder in your project.
 cm.install_plugin require('./plugins/partials')(require, './templates')
+
+template = ->
+  @p ->
+    @marked "This is using __markdown__"
+    @partial '_mypartial', 'myarg'
 ```
 
 ## Installation
