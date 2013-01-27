@@ -61,6 +61,16 @@ fruits  = ['Apple', 'Banana', 'Raisin', 'Rice Crispies', 'Mickey Mouse']
 cm.render template, options, fruits
 ```
 
+## Sample plugins
+
+Sample plugins are in the 'plugins' directory. The best way to use them is to copy them
+into your project (which manages your dependencies), and install them globally:
+``` coffeescript
+cm = require 'coffeemugg'
+cm.install_plugin require('./plugins/marked')
+cm.install_plugin require('./plugins/partials')(require, './templates')
+```
+
 ## Installation
 
     npm install coffeemugg
