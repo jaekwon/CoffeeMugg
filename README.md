@@ -27,7 +27,7 @@ cm.render ->
 
 ## Custom TAG functions (subroutines)
 
-You can add custom @TAG functions to coffeemugg with 'plugins'.
+You can add custom @TAG functions to CoffeeMugg with 'plugins'.
 
 ```coffeescript
 # Install custom tags! In this case, just the tag '@showFruits'
@@ -47,7 +47,16 @@ template = (fruits) ->
     # Pass in 'fruits' to our custom '@showFruits' tag
     @showFruits fruits
 
-options = {autoescape:yes}
+# Options to CoffeeMugg
+#   autoescape: The "text" values are automatically HTML escaped.
+#               You can still use the '@raw' tag for unescaped text.
+#               Default: yes
+#   format:     The output HTML will be formatted all pretty.
+#               Default: yes
+options = {
+  autoescape: yes
+  format:     yes
+}
 fruits  = ['Apple', 'Banana', 'Raisin', 'Rice Crispies', 'Mickey Mouse']
 cm.render template, options, fruits
 ```

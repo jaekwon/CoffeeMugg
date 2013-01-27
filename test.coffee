@@ -1,10 +1,9 @@
 tests =
-
+      
   'Raw text':
     template: ->
       @raw '<foo/>'
     expected: '<foo/>'
-      
 
   'Literal text':
     template: ->
@@ -73,14 +72,14 @@ tests =
 
   'Escaping':
     template: ->
-      @h1 @h("<script>alert('\"pwned\" by c&a &copy;')</script>")
-    expected: "<h1>&lt;script&gt;alert('&quot;pwned&quot; by c&amp;a &amp;copy;')&lt;/script&gt;</h1>"
-
-  'Autoescaping':
-    template: ->
       @h1 "<script>alert('\"pwned\" by c&a &copy;')</script>"
     expected: "<h1>&lt;script&gt;alert('&quot;pwned&quot; by c&amp;a &amp;copy;')&lt;/script&gt;</h1>"
-    options: {autoescape: yes}
+
+  'Autoescaping off':
+    template: ->
+      @h1 @h("<script>alert('\"pwned\" by c&a &copy;')</script>")
+    expected: "<h1>&lt;script&gt;alert('&quot;pwned&quot; by c&amp;a &amp;copy;')&lt;/script&gt;</h1>"
+    options: {autoescape: no}
 
   'ID/class shortcut (combo)':
     template: ->

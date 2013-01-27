@@ -88,8 +88,8 @@ NEWLINE = {}
 #   result = context.render(myTemplateFunction, args...)
 # 
 # options:
-#   format:     Format with newlines and tabs (default off)
-#   autoescape: Autoescape all strings (default off)
+#   format:     Format with newlines and tabs (default on)
+#   autoescape: Autoescape all strings (default on)
 #   plugins:    Array of plugins, which are functions that take a context as argument.
 # 
 coffeemugg.CMContext = CMContext = (options={}) ->
@@ -102,7 +102,7 @@ coffeemugg.CMContext = CMContext = (options={}) ->
 
     setOptions: (options) ->
       options.format      ?= on
-      options.autoescape  ?= off
+      options.autoescape  ?= on
       @options = options
       return @
 

@@ -1,2 +1,5 @@
+* v0.0.7 (Jan 26, 2013)
+  - autoescape is on by default
+  - plugins system, adding some plugins
 * v0.0.3 (Dec 12, 2011)
   - removed <CMContext>.render method, since 'render' is a common function name for a templating system to override.
