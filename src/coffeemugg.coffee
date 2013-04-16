@@ -141,7 +141,8 @@ coffeemugg.CMContext = CMContext = (options={}) ->
         @raw ' />'
       else
         @raw '>'
-        @render_contents(contents)
+        escapeContents = name != 'script' # do not escape the contents of a <script> tag.
+        @render_contents(contents, escapeContents)
         @raw "</#{name}>"
       NEWLINE
 
@@ -172,16 +173,19 @@ coffeemugg.CMContext = CMContext = (options={}) ->
           @raw " #{k}=\"#{String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;")}\""
       null
 
-    render_contents: (contents, args...) ->
+    render_contents: (contents, escape) ->
       if typeof contents is 'function'
         @_indent += '  ' if @options.format
-        contents = contents.call(this, args...)
+        contents = contents.call(this)
         @_indent = @_indent[2..] if @options.format
         if contents is NEWLINE
           @rawnl ""
       switch typeof contents
         when 'string', 'number', 'boolean'
-          @text(contents)
+          if escape
+            @text(contents)
+          else
+            @raw(contents)
       null
 
     h: htmlEscape
