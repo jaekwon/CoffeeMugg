@@ -160,6 +160,9 @@ coffeemugg.CMContext = CMContext = (options={}) ->
 
     render_attrs: (obj) ->
       for k, v of obj
+        # Hyphenate any camelcase attributes
+        k = k.replace(/([A-Z])/g, '-$1').toLowerCase()
+
         # true is rendered as `selected="selected"`.
         if typeof v is 'boolean' and v
           v = k
