@@ -50,6 +50,11 @@ tests =
       @a href: '/', title: 'Home'
     expected: '<a href="/" title="Home"></a>'
 
+  'Camelcase attributes -> hyphenated':
+    template: ->
+      @a href: '/', dataTrackingAction: 'specialclick'
+    expected: '<a href="/" data-tracking-action="specialclick"></a>'
+
   'HereDocs':
     template: ->
       @script """
